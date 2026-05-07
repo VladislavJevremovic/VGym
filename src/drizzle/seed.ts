@@ -54,7 +54,7 @@ const exerciseData: { name: string; muscleGroup: MuscleGroup; category: Category
   { name: "Farmer's Walk", muscleGroup: "Forearms", category: "dumbbell" },
 
   { name: "DB Squat", muscleGroup: "Quads", category: "dumbbell" },
-  { name: "Bulgarian Split Squat", muscleGroup: "Quads", category: "dumbbell" },
+  { name: "DB Bulgarian Split Squat", muscleGroup: "Quads", category: "dumbbell" },
   { name: "Lunge", muscleGroup: "Quads", category: "dumbbell" },
   { name: "Leg Extension", muscleGroup: "Quads", category: "machine" },
   { name: "Leg Press", muscleGroup: "Quads", category: "machine" },
@@ -97,10 +97,12 @@ async function seed() {
   console.log("Seeding routines...");
 
   const routineDefs = [
-    { name: "Workout A", e: ["Leg Press", "DB Incline Press", "Chest-Supported Row"] },
-    { name: "Workout B", e: ["Trap-Bar RDL", "Machine Horizontal Chest Press", "Lat Pulldown (Wide Grip)"] },
-    { name: "Workout C", e: ["Smith Machine Squat", "DB Shoulder Press", "Lat Pulldown (Close Grip)"] },
-    { name: "Off-Day Supplementals", e: ["Bayesian Cable Curl", "DB Hammer Curl", "Reverse Pec Deck", "Overhead Cable Triceps Extension", "Machine Chest Fly", "DB Lateral Raise", "Standing DB Calf Raise", "Leg Curls", "Plank"] },
+    { name: "PPL Push A", e: ["DB Incline Press", "Machine Chest Press", "Machine Chest Fly", "Air Bike"] },
+    { name: "PPL Pull A", e: ["Lat Pulldown (Wide Grip)", "Seated Machine Row", "Cable Face Pull", "Air Bike"] },
+    { name: "PPL Legs A", e: ["Leg Press", "Trap Bar Deadlift", "Seated Calf Raise", "Air Bike"] },
+    { name: "PPL Push B", e: ["DB Shoulder Press", "Machine Chest Press", "Triceps Bar Pushdown", "Air Bike"] },
+    { name: "PPL Pull B", e: ["Lat Pulldown (Close Grip)", "Seated Cable Row", "DB Hammer Curl", "Air Bike"] },
+    { name: "PPL Legs B", e: ["Smith Machine Squat", "Trap Bar Deadlift", "DB Bulgarian Split Squat", "Air Bike"] },
   ];
 
   for (const rd of routineDefs) {
