@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
 import { workoutExercises, sets, workouts } from "@/drizzle/schema";
 import { eq, asc, inArray, gte, and } from "drizzle-orm";
-import { getLocalDateString } from "@/lib/utils";
+
 
 export async function GET(
   request: Request,

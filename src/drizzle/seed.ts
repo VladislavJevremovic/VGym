@@ -2,6 +2,7 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { exercises, routines, routineExercises } from "./schema";
 import { eq } from "drizzle-orm";
+import type { MuscleGroup, Category } from "../lib/constants";
 
 const client = createClient({
   url: process.env.TURSO_DB_URL!,
@@ -9,65 +10,74 @@ const client = createClient({
 });
 const db = drizzle(client);
 
-const exerciseData: { name: string; muscleGroup: string; category: string }[] = [
-  { name: "Barbell Bench Press", muscleGroup: "Chest", category: "barbell" },
+const exerciseData: { name: string; muscleGroup: MuscleGroup; category: Category }[] = [
+  { name: "DB Bench Press", muscleGroup: "Chest", category: "dumbbell" },
   { name: "DB Incline Press", muscleGroup: "Chest", category: "dumbbell" },
-  { name: "DB Flat Press", muscleGroup: "Chest", category: "dumbbell" },
-  { name: "DB Decline Press", muscleGroup: "Chest", category: "dumbbell" },
-  { name: "Machine Horizontal Chest Press", muscleGroup: "Chest", category: "machine" },
+  { name: "DB Fly", muscleGroup: "Chest", category: "dumbbell" },
+  { name: "Machine Chest Press", muscleGroup: "Chest", category: "machine" },
   { name: "Machine Chest Fly", muscleGroup: "Chest", category: "machine" },
-  { name: "Cable Crossover", muscleGroup: "Chest", category: "cable" },
-  { name: "Dips", muscleGroup: "Chest", category: "bodyweight" },
-  { name: "Push-ups", muscleGroup: "Chest", category: "bodyweight" },
-  { name: "Barbell Row", muscleGroup: "Back", category: "barbell" },
+  { name: "Cable Crossover Fly", muscleGroup: "Chest", category: "cable" },
+  { name: "Push-up", muscleGroup: "Chest", category: "bodyweight" },
+
   { name: "DB Row", muscleGroup: "Back", category: "dumbbell" },
-  { name: "Chest-Supported Row", muscleGroup: "Back", category: "machine" },
+  { name: "Chest-Supported Row", muscleGroup: "Back", category: "dumbbell" },
   { name: "Seated Machine Row", muscleGroup: "Back", category: "machine" },
+  { name: "Seated Cable Row", muscleGroup: "Back", category: "cable" },
   { name: "Lat Pulldown (Wide Grip)", muscleGroup: "Back", category: "cable" },
   { name: "Lat Pulldown (Close Grip)", muscleGroup: "Back", category: "cable" },
-  { name: "Pull-ups", muscleGroup: "Back", category: "bodyweight" },
-  { name: "Cable Pullover", muscleGroup: "Back", category: "cable" },
-  { name: "Deadlift", muscleGroup: "Back", category: "barbell" },
-  { name: "Trap-Bar RDL", muscleGroup: "Back", category: "barbell" },
-  { name: "Barbell OHP", muscleGroup: "Shoulders", category: "barbell" },
+
+  { name: "DB Shrug", muscleGroup: "Trapezius", category: "dumbbell" },
+  { name: "Cable Shrug", muscleGroup: "Trapezius", category: "cable" },
+  { name: "Cable Upright Row", muscleGroup: "Trapezius", category: "cable" },
+
+  { name: "Incline Back Extension", muscleGroup: "LowerBack", category: "machine" },
+  { name: "Superman", muscleGroup: "LowerBack", category: "bodyweight" },
+
   { name: "DB Shoulder Press", muscleGroup: "Shoulders", category: "dumbbell" },
-  { name: "Machine Shoulder Press", muscleGroup: "Shoulders", category: "machine" },
-  { name: "DB Lateral Raise", muscleGroup: "Shoulders", category: "dumbbell" },
-  { name: "Cable Lateral Raise", muscleGroup: "Shoulders", category: "cable" },
-  { name: "Reverse Pec Deck", muscleGroup: "Shoulders", category: "machine" },
-  { name: "Cable Face Pull", muscleGroup: "Shoulders", category: "cable" },
   { name: "DB Front Raise", muscleGroup: "Shoulders", category: "dumbbell" },
-  { name: "Barbell Curl", muscleGroup: "Biceps", category: "barbell" },
+  { name: "DB Lateral Raise", muscleGroup: "Shoulders", category: "dumbbell" },
+  { name: "DB Back Fly", muscleGroup: "Shoulders", category: "dumbbell" },
+  { name: "Machine Shoulder Press", muscleGroup: "Shoulders", category: "machine" },
+  { name: "Reverse Pec Deck", muscleGroup: "Shoulders", category: "machine" },
+  { name: "Cable Lateral Raise", muscleGroup: "Shoulders", category: "cable" },
+  { name: "Cable Face Pull", muscleGroup: "Shoulders", category: "cable" },
+
   { name: "DB Curl", muscleGroup: "Biceps", category: "dumbbell" },
   { name: "DB Hammer Curl", muscleGroup: "Biceps", category: "dumbbell" },
+  { name: "Seated Incline DB Curl", muscleGroup: "Biceps", category: "dumbbell" },
   { name: "Bayesian Cable Curl", muscleGroup: "Biceps", category: "cable" },
-  { name: "Cable Curl", muscleGroup: "Biceps", category: "cable" },
-  { name: "Preacher Curl", muscleGroup: "Biceps", category: "barbell" },
-  { name: "Close-Grip Bench Press", muscleGroup: "Triceps", category: "barbell" },
+  { name: "Cable Bar Curl", muscleGroup: "Biceps", category: "cable" },
+
   { name: "Overhead Cable Triceps Extension", muscleGroup: "Triceps", category: "cable" },
   { name: "Triceps Bar Pushdown", muscleGroup: "Triceps", category: "cable" },
-  { name: "Rope Pushdown", muscleGroup: "Triceps", category: "cable" },
-  { name: "Skull Crusher", muscleGroup: "Triceps", category: "barbell" },
-  { name: "DB Overhead Extension", muscleGroup: "Triceps", category: "dumbbell" },
-  { name: "Barbell Squat", muscleGroup: "Legs", category: "barbell" },
-  { name: "Smith Machine Squat", muscleGroup: "Legs", category: "machine" },
-  { name: "Leg Press", muscleGroup: "Legs", category: "machine" },
-  { name: "Leg Curls", muscleGroup: "Legs", category: "machine" },
-  { name: "Leg Extension", muscleGroup: "Legs", category: "machine" },
-  { name: "Romanian Deadlift", muscleGroup: "Legs", category: "barbell" },
-  { name: "Hip Thrust", muscleGroup: "Legs", category: "barbell" },
-  { name: "Bulgarian Split Squat", muscleGroup: "Legs", category: "dumbbell" },
-  { name: "Lunges", muscleGroup: "Legs", category: "dumbbell" },
-  { name: "Standing DB Calf Raise", muscleGroup: "Legs", category: "dumbbell" },
-  { name: "Seated Calf Raise", muscleGroup: "Legs", category: "machine" },
-  { name: "Plank", muscleGroup: "Core", category: "bodyweight" },
+
+  { name: "Farmer's Walk", muscleGroup: "Forearms", category: "dumbbell" },
+
+  { name: "DB Squat", muscleGroup: "Quads", category: "dumbbell" },
+  { name: "Bulgarian Split Squat", muscleGroup: "Quads", category: "dumbbell" },
+  { name: "Lunge", muscleGroup: "Quads", category: "dumbbell" },
+  { name: "Leg Extension", muscleGroup: "Quads", category: "machine" },
+  { name: "Leg Press", muscleGroup: "Quads", category: "machine" },
+  { name: "Smith Machine Squat", muscleGroup: "Quads", category: "machine" },
+
+  { name: "Trap Bar Deadlift", muscleGroup: "Hamstrings", category: "trapbar" },
+  { name: "DB Romanian Deadlift", muscleGroup: "Hamstrings", category: "dumbbell" },
+  { name: "Lying Leg Curl", muscleGroup: "Hamstrings", category: "machine" },
+  
+  { name: "DB Hip Thrust", muscleGroup: "Glutes", category: "dumbbell" },
+  { name: "Glute Kickback", muscleGroup: "Glutes", category: "machine" },
+  { name: "Hip Thrust", muscleGroup: "Glutes", category: "bodyweight" },
+
+  { name: "Standing DB Calf Raise", muscleGroup: "Calves", category: "dumbbell" },
+  { name: "Seated Calf Raise", muscleGroup: "Calves", category: "machine" },
+
   { name: "Cable Crunch", muscleGroup: "Core", category: "cable" },
   { name: "Hanging Leg Raise", muscleGroup: "Core", category: "bodyweight" },
-  { name: "Ab Wheel Rollout", muscleGroup: "Core", category: "bodyweight" },
+  { name: "Plank", muscleGroup: "Core", category: "bodyweight" },
+
   { name: "Air Bike", muscleGroup: "Cardio", category: "cardio" },
   { name: "Treadmill", muscleGroup: "Cardio", category: "cardio" },
-  { name: "Rowing Machine", muscleGroup: "Cardio", category: "cardio" },
-  { name: "Stairmaster", muscleGroup: "Cardio", category: "cardio" },
+  { name: "Elliptical", muscleGroup: "Cardio", category: "cardio" },
 ];
 
 async function seed() {

@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Timer, X } from "lucide-react";
+import { REST_PRESETS, REP_PRESETS } from "@/lib/constants";
 
 interface SetInputProps {
   onAdd: (reps: number, weight: number | null) => void;
 }
-
-const REST_PRESETS = [60, 90, 120, 180];
 
 export default function SetInput({ onAdd }: SetInputProps) {
   const [reps, setReps] = useState("");
@@ -133,7 +132,7 @@ export default function SetInput({ onAdd }: SetInputProps) {
       </div>
 
       <div className="flex gap-2 mb-3">
-        {[1, 5, 8, 10, 12, 15, 20].map((r) => (
+        {REP_PRESETS.map((r) => (
           <button
             key={r}
             onClick={() => addFromPreset(r)}

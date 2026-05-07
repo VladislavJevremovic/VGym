@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import type { Exercise } from "@/lib/types";
+import { MUSCLE_GROUPS } from "@/lib/constants";
 
 interface ExercisePickerProps {
   onSelect: (exercise: Exercise) => void;
@@ -11,7 +12,7 @@ interface ExercisePickerProps {
 
 let cachedExercises: Exercise[] | null = null;
 
-const groupOrder = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Legs", "Core", "Cardio"];
+const groupOrder = MUSCLE_GROUPS;
 const listboxId = "exercise-listbox";
 
 export default function ExercisePicker({ onSelect, selectedId }: ExercisePickerProps) {

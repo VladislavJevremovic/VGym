@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Plus, X, Search, Check, Pencil, Trash2, RotateCcw } from "lucide-react";
 import type { Exercise, Routine } from "@/lib/types";
+import { MUSCLE_GROUPS } from "@/lib/constants";
 
-const groupOrder = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Legs", "Core", "Cardio"];
+const groupOrder = MUSCLE_GROUPS;
 
 function RoutineForm({
   onDone,
