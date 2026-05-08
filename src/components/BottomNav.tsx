@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Pencil, ListOrdered, Calendar, BarChart3 } from "lucide-react";
+import { Pencil, ListOrdered, Calendar, BarChart3, Settings } from "lucide-react";
 
 const tabs = [
   { label: "Log", href: "/log", icon: Pencil },
   { label: "Routines", href: "/routines", icon: ListOrdered },
   { label: "History", href: "/history", icon: Calendar },
   { label: "Stats", href: "/stats", icon: BarChart3 },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function BottomNav() {

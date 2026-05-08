@@ -2,11 +2,12 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import SetInput from "@/components/SetInput";
 import SetRow from "@/components/SetRow";
 import ErrorBanner from "@/components/ErrorBanner";
-import type { Routine, WorkoutSet } from "@/lib/types";
+import ExercisePicker from "@/components/ExercisePicker";
+import type { Routine, WorkoutSet, Exercise } from "@/lib/types";
 import { getLocalDateString, mapSetsForApi, getErrorMessage } from "@/lib/utils";
 
 interface ExerciseSets {
@@ -25,6 +26,7 @@ export default function RoutineSessionPage({
   const [exerciseSets, setExerciseSets] = useState<ExerciseSets[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [editingStep, setEditingStep] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -101,6 +103,22 @@ export default function RoutineSessionPage({
           : es
       )
     );
+  };
+
+  const handleSwapExercise = (newExercise: Exercise) => {
+    if (editingStep === null || !routine) return;
+    setEditingStep(null);
+    setExerciseSets((prev) =>
+      prev.map((es, i) =>
+        i === editingStep ? { exerciseId: newExercise.id, sets: es.sets } : es
+      )
+    );
+    setRoutine({
+      ...routine,
+      exercises: routine.exercises.map((e, i) =>
+        i === editingStep ? { ...e, exercise: newExercise } : e
+      ),
+    });
   };
 
   const handleNext = () => {
@@ -189,8 +207,26 @@ export default function RoutineSessionPage({
       {currentExercise && (
         <>
           <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 mb-4">
-            <h2 className="text-xl font-bold text-white">{currentExercise.name}</h2>
-            <span className="text-xs text-zinc-500">{currentExercise.muscleGroup}</span>
+            {editingStep === currentStep ? (
+              <ExercisePicker
+                selectedId={currentExercise.id}
+                onSelect={handleSwapExercise}
+              />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">{currentExercise.name}</h2>
+                  <span className="text-xs text-zinc-500">{currentExercise.muscleGroup}</span>
+                </div>
+                <button
+                  onClick={() => setEditingStep(currentStep)}
+                  className="text-zinc-500 hover:text-emerald-400 transition-colors p-1"
+                  aria-label="Swap exercise"
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
 
           <SetInput category={currentExercise.category} onAdd={handleAddSet} onLogCardio={handleLogCardio} />

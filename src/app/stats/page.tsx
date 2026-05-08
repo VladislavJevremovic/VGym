@@ -439,7 +439,7 @@ function PerExerciseChart() {
               <h3 className="text-sm font-semibold text-white mb-4">
                 {exercise.name} — {currentMetric.label}
               </h3>
-              <ResponsiveContainer width="100%" height={500}>
+              <ResponsiveContainer width="100%" height={250}>
                 {chartType === "line" ? (
                   <LineChart data={data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />

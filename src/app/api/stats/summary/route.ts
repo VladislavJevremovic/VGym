@@ -21,36 +21,45 @@ export async function GET() {
     .orderBy(sql`${workouts.date} desc`);
 
   const dates = allDates.map((w) => w.date);
+
+  function daysBetween(a: string, b: string): number {
+    return (new Date(b).getTime() - new Date(a).getTime()) / 86400000;
+  }
+
   let currentStreak = 0;
   const today = new Date();
   const todayStr = formatDate(today);
   const sortedDates = [...new Set(dates)].sort().reverse();
-  for (let i = 0; i < sortedDates.length; i++) {
-    const expected = new Date(todayStr);
-    expected.setDate(expected.getDate() - i);
-    const expectedStr = formatDate(expected);
-    if (sortedDates[i] === expectedStr) {
-      currentStreak++;
-    } else {
-      break;
+  if (sortedDates.length > 0) {
+    const lastWorkout = sortedDates[0];
+    if (daysBetween(lastWorkout, todayStr) <= 1) {
+      currentStreak = 1;
+      let lastDate = lastWorkout;
+      for (let i = 1; i < sortedDates.length; i++) {
+        if (daysBetween(sortedDates[i], lastDate) <= 2) {
+          currentStreak++;
+          lastDate = sortedDates[i];
+        } else {
+          break;
+        }
+      }
     }
   }
 
   let longestStreak = 0;
   const uniqueAsc = [...new Set(dates)].sort();
-  let run = 1;
-  for (let i = 1; i < uniqueAsc.length; i++) {
-    const prev = new Date(uniqueAsc[i - 1]);
-    const curr = new Date(uniqueAsc[i]);
-    const diff = (curr.getTime() - prev.getTime()) / 86400000;
-    if (diff === 1) {
-      run++;
-    } else {
-      longestStreak = Math.max(longestStreak, run);
-      run = 1;
+  if (uniqueAsc.length > 0) {
+    let run = 1;
+    for (let i = 1; i < uniqueAsc.length; i++) {
+      if (daysBetween(uniqueAsc[i - 1], uniqueAsc[i]) <= 2) {
+        run++;
+      } else {
+        longestStreak = Math.max(longestStreak, run);
+        run = 1;
+      }
     }
+    longestStreak = Math.max(longestStreak, run, currentStreak);
   }
-  longestStreak = Math.max(longestStreak, run, currentStreak);
 
   const now = new Date();
   const dayOfWeek = now.getDay();
