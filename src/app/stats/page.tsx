@@ -75,7 +75,7 @@ function SummaryCards({ data }: { data: SummaryData | null }) {
   const cards = [
     { label: "Total Workouts", value: data.totalWorkouts },
     { label: "Total Volume", value: `${(data.totalVolume / 1000).toFixed(1)}k kg` },
-    { label: "Current Streak", value: data.currentStreak > 0 ? `${data.currentStreak} 🔥` : "0" },
+    { label: "Current Streak", value: data.currentStreak >= 3 ? `${data.currentStreak} 🔥` : String(data.currentStreak) },
     { label: "Days This Week", value: `${data.daysThisWeek}/7` },
   ];
   return (
@@ -95,71 +95,79 @@ function CalendarHeatmap({ data, loading }: { data: CalendarDay[]; loading: bool
   if (data.length === 0) return <p className="text-sm text-zinc-600 py-4 text-center">No workouts yet</p>;
 
   const dateMap = new Map(data.map((d) => [d.date, d.workoutCount]));
+
   const today = new Date();
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 364);
+  today.setHours(0, 0, 0, 0);
+  const dayOfWeek = today.getDay();
+  const thisMonday = new Date(today);
+  thisMonday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
 
-  const days: { date: Date; count: number }[] = [];
-  for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
-    const str = formatDate(d);
-    days.push({ date: new Date(d), count: dateMap.get(str) ?? 0 });
-  }
+  const firstMonday = new Date(thisMonday);
+  firstMonday.setDate(firstMonday.getDate() - 52 * 7);
 
-  const weeks: { date: Date; count: number }[][] = [];
-  let week: typeof days = [];
-  for (const day of days) {
-    week.push(day);
-    if (week.length === 7 || day.date.getTime() === today.getTime()) {
-      weeks.push(week);
-      week = [];
+  const todayStr = formatDate(today);
+
+  const weeks: { date: string; count: number }[][] = [];
+  for (let w = 0; w < 53; w++) {
+    const week: { date: string; count: number }[] = [];
+    for (let d = 0; d < 7; d++) {
+      const dt = new Date(firstMonday);
+      dt.setDate(firstMonday.getDate() + w * 7 + d);
+      const dateStr = formatDate(dt);
+      const count = dateStr > todayStr ? -1 : (dateMap.get(dateStr) ?? 0);
+      week.push({ date: dateStr, count });
     }
+    weeks.push(week);
   }
 
   const getColor = (count: number) => {
+    if (count === -1) return "bg-transparent";
     if (count === 0) return "bg-zinc-800";
     if (count === 1) return "bg-emerald-900";
     if (count === 2) return "bg-emerald-700";
     return "bg-emerald-500";
   };
 
-  const monthLabels: { index: number; label: string }[] = [];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  for (let i = 0; i < weeks.length; i++) {
-    const m = weeks[i][0]?.date.getMonth();
-    if (m !== undefined && (i === 0 || weeks[i - 1][0]?.date.getMonth() !== m)) {
-      monthLabels.push({ index: i, label: months[m] });
+  const monthLabels: { index: number; label: string }[] = [];
+  for (let w = 0; w < weeks.length; w++) {
+    const dt = new Date(weeks[w][0].date + "T00:00:00");
+    const m = dt.getMonth();
+    if (w === 0 || new Date(weeks[w - 1][0].date + "T00:00:00").getMonth() !== m) {
+      monthLabels.push({ index: w, label: months[m] });
     }
   }
 
-  const dayLabels = ["Mon", "Wed", "Fri"];
+  const CELL = 14;
 
   return (
     <div className="overflow-x-auto">
-      <div className="flex gap-1 text-xs text-zinc-600 mb-1" style={{ paddingLeft: "2rem" }}>
+      <div className="relative text-xs text-zinc-600 h-5" style={{ marginLeft: "28px" }}>
         {monthLabels.map((m) => (
-          <span key={m.index} style={{ marginLeft: m.index === 0 ? 0 : `${(m.index - (monthLabels.find((p) => monthLabels.indexOf(p) < monthLabels.indexOf(m))?.index ?? 0)) * 12}px` }}>
+          <span key={m.index} className="absolute top-0" style={{ left: `${m.index * CELL}px` }}>
             {m.label}
           </span>
         ))}
       </div>
       <div className="flex gap-0.5">
-        <div className="flex flex-col gap-0.5 mr-1 text-xs text-zinc-600 justify-around py-0.5">
-          {dayLabels.map((d) => (
-            <span key={d} className="h-3 leading-3">{d}</span>
-          ))}
+        <div className="flex flex-col gap-0.5 mr-1 text-xs text-zinc-600 py-0.5">
+          <span className="h-3 leading-3">Mon</span>
+          <span className="h-3 leading-3" />
+          <span className="h-3 leading-3">Wed</span>
+          <span className="h-3 leading-3" />
+          <span className="h-3 leading-3">Fri</span>
+          <span className="h-3 leading-3" />
+          <span className="h-3 leading-3" />
         </div>
-        {weeks.map((w, wi) => (
+        {weeks.map((week, wi) => (
           <div key={wi} className="flex flex-col gap-0.5">
-            {[...Array(7)].map((_, di) => {
-              const day = w.find((d) => d.date.getDay() === (di + 1) % 7);
-              return (
-                <div
-                  key={di}
-                  className={`w-3 h-3 rounded-sm ${day ? getColor(day.count) : "bg-transparent"}`}
-                  title={day ? `${formatDate(day.date)}: ${day.count} workout(s)` : ""}
-                />
-              );
-            })}
+            {week.map((day, di) => (
+              <div
+                key={di}
+                className={`w-3 h-3 rounded-sm ${getColor(day.count)}`}
+                title={day.count >= 0 ? `${day.date}: ${day.count} workout(s)` : ""}
+              />
+            ))}
           </div>
         ))}
       </div>
@@ -293,8 +301,17 @@ function MuscleGroupChart({ data, loading }: { data: MuscleGroupVolume[]; loadin
   );
 }
 
-function VolumeChart({ data, loading }: { data: VolumePoint[]; loading: boolean }) {
+function VolumeChart() {
   const [periodType, setPeriodType] = useState<"weekly" | "monthly">("weekly");
+  const [data, setData] = useState<VolumePoint[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/stats/volume?period=${periodType}&count=12`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => { setData([]); setLoading(false); });
+  }, [periodType]);
 
   if (loading) return <SkeletonCard className="h-48" />;
   if (data.length === 0) return <p className="text-sm text-zinc-600 py-4 text-center">No data yet</p>;
@@ -520,8 +537,6 @@ export default function StatsPage() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [calendar, setCalendar] = useState<CalendarDay[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(true);
-  const [volume, setVolume] = useState<VolumePoint[]>([]);
-  const [volumeLoading, setVolumeLoading] = useState(true);
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroupVolume[]>([]);
   const [mgLoading, setMgLoading] = useState(true);
   const [strength, setStrength] = useState<StrengthRow[]>([]);
@@ -541,10 +556,9 @@ export default function StatsPage() {
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [s, c, v, mg, st, i, p] = await Promise.all([
+        const [s, c, mg, st, i, p] = await Promise.all([
           fetchJson("/api/stats/summary"),
           fetchJson("/api/stats/calendar?months=12"),
-          fetchJson("/api/stats/volume?period=weekly&count=12"),
           fetchJson("/api/stats/muscle-groups?days=90"),
           fetchJson("/api/stats/strength-table?days=90"),
           fetchJson("/api/stats/intensity?days=90"),
@@ -552,7 +566,6 @@ export default function StatsPage() {
         ]);
         setSummary(s);
         setCalendar(c);
-        setVolume(v);
         setMuscleGroups(mg);
         setStrength(st);
         setIntensity(i);
@@ -562,7 +575,6 @@ export default function StatsPage() {
       } finally {
         setSummaryLoading(false);
         setCalendarLoading(false);
-        setVolumeLoading(false);
         setMgLoading(false);
         setStrengthLoading(false);
         setIntensityLoading(false);
@@ -594,7 +606,7 @@ export default function StatsPage() {
         </AccordionSection>
 
         <AccordionSection title="Volume Overview" defaultOpen>
-          <VolumeChart data={volume} loading={volumeLoading} />
+          <VolumeChart />
         </AccordionSection>
 
         <AccordionSection title="Muscle Group Distribution">
