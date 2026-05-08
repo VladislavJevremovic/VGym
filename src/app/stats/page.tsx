@@ -50,7 +50,7 @@ function AccordionSection({
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   return (
-    <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
+    <div className="bg-zinc-900 rounded-xl border border-zinc-800">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-zinc-800/50 transition-colors"
@@ -422,7 +422,7 @@ function PerExerciseChart() {
               <h3 className="text-sm font-semibold text-white mb-4">
                 {exercise.name} — {currentMetric.label}
               </h3>
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={500}>
                 {chartType === "line" ? (
                   <LineChart data={data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
