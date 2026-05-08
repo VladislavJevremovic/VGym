@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { workouts, workoutExercises, sets, exercises } from "@/drizzle/schema";
 import { eq, desc, asc, inArray, lt } from "drizzle-orm";
+import { validateCreateWorkoutBody } from "@/lib/validation";
 
 export async function GET(request: Request) {
   const db = getDb();
@@ -66,32 +67,9 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { date, routineId, notes, exercises: exerciseData } = body;
 
-  if (!date || !exerciseData?.length) {
-    return Response.json({ error: "date and exercises required" }, { status: 400 });
-  }
-
-  for (const ex of exerciseData) {
-    if (!Number.isInteger(ex.exerciseId) || ex.exerciseId < 1) {
-      return Response.json({ error: "Invalid exercise ID" }, { status: 400 });
-    }
-    if (ex.category === "cardio") {
-      for (const s of ex.sets ?? []) {
-        if (!Number.isInteger(s.durationSeconds) || s.durationSeconds < 1) {
-          return Response.json({ error: "Duration must be a positive number of seconds" }, { status: 400 });
-        }
-      }
-    } else {
-      for (const s of ex.sets ?? []) {
-        if (!Number.isInteger(s.reps) || s.reps < 1) {
-          return Response.json({ error: "Reps must be a positive integer" }, { status: 400 });
-        }
-        if (s.weightKg !== null && s.weightKg !== undefined) {
-          if (typeof s.weightKg !== "number" || s.weightKg < 0) {
-            return Response.json({ error: "Weight must be a non-negative number" }, { status: 400 });
-          }
-        }
-      }
-    }
+  const bodyErr = validateCreateWorkoutBody(body);
+  if (bodyErr) {
+    return Response.json({ error: bodyErr }, { status: 400 });
   }
 
   const workoutId = await db.transaction(async (tx) => {
