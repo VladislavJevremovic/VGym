@@ -25,8 +25,8 @@ export async function GET(request: Request) {
     .select({
       period: dateExpr,
       totalVolume: sql<number>`coalesce(sum(${sets.reps} * ${sets.weightKg}), 0)`,
-      workoutCount: sql<number>`count(distinct ${workouts.id})::int`,
-      totalSets: sql<number>`count(${sets.id})::int`,
+      workoutCount: sql<number>`count(distinct ${workouts.id})`,
+      totalSets: sql<number>`count(${sets.id})`,
     })
     .from(workouts)
     .leftJoin(workoutExercises, eq(workoutExercises.workoutId, workouts.id))

@@ -7,7 +7,7 @@ export async function GET() {
   const db = getDb();
 
   const [{ totalWorkouts }] = await db.select({
-    totalWorkouts: sql<number>`count(*)::int`,
+    totalWorkouts: sql<number>`count(*)`,
   }).from(workouts);
 
   const volumeResult = await db.select({
@@ -58,7 +58,7 @@ export async function GET() {
   monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
   const mondayStr = formatDate(monday);
   const [{ daysThisWeek }] = await db.select({
-    daysThisWeek: sql<number>`count(distinct ${workouts.date})::int`,
+    daysThisWeek: sql<number>`count(distinct ${workouts.date})`,
   }).from(workouts).where(gte(workouts.date, mondayStr));
 
   const weekAgo = new Date(now);

@@ -16,8 +16,8 @@ export async function GET(request: Request) {
     .select({
       muscleGroup: exercises.muscleGroup,
       volume: sql<number>`coalesce(sum(${sets.reps} * ${sets.weightKg}), 0)`,
-      setCount: sql<number>`count(${sets.id})::int`,
-      exerciseCount: sql<number>`count(distinct ${exercises.id})::int`,
+      setCount: sql<number>`count(${sets.id})`,
+      exerciseCount: sql<number>`count(distinct ${exercises.id})`,
     })
     .from(sets)
     .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))

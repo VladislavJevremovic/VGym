@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const rows = await db
     .select({
       date: workouts.date,
-      workoutCount: sql<number>`count(distinct ${workouts.id})::int`,
+      workoutCount: sql<number>`count(distinct ${workouts.id})`,
       totalVolume: sql<number>`coalesce(sum(${sets.reps} * ${sets.weightKg}), 0)`,
     })
     .from(workouts)
