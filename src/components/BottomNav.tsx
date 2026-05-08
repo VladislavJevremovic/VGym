@@ -8,7 +8,7 @@ const tabs = [
   { label: "Log", href: "/log", icon: Pencil },
   { label: "Routines", href: "/routines", icon: ListOrdered },
   { label: "History", href: "/history", icon: Calendar },
-  { label: "Charts", href: "/charts", icon: BarChart3 },
+  { label: "Stats", href: "/stats", icon: BarChart3 },
 ];
 
 export default function BottomNav() {

@@ -1,4 +1,4 @@
-const SHELL_URLS = ["/log", "/routines", "/history", "/charts"];
+const SHELL_URLS = ["/log", "/routines", "/history", "/stats"];
 let CACHE_NAME;
 
 // --- IndexedDB helpers for offline queue + API cache ---

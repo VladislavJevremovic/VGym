@@ -6,7 +6,7 @@ import ExercisePicker from "@/components/ExercisePicker";
 import SetInput from "@/components/SetInput";
 import SetRow from "@/components/SetRow";
 import ErrorBanner from "@/components/ErrorBanner";
-import type { Exercise, Workout, WorkoutSet } from "@/lib/types";
+import type { Exercise, Workout, WorkoutSet, PRData } from "@/lib/types";
 import { getLocalDateString, fmtDuration, mapSetsForApi, getErrorMessage } from "@/lib/utils";
 
 interface LastPerf {
@@ -28,6 +28,9 @@ function LogContent() {
   const [lastPerf, setLastPerf] = useState<LastPerf | null>(null);
   const [lastPerfLoading, setLastPerfLoading] = useState(false);
   const [loggedExercises, setLoggedExercises] = useState<LoggedExercise[]>([]);
+  const [prBadges, setPrBadges] = useState<Record<string, string>>({});
+  const [prs, setPrs] = useState<Map<number, PRData>>(new Map());
+  const [prsLoaded, setPrsLoaded] = useState(false);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -51,6 +54,18 @@ function LogContent() {
       })
       .catch((e: Error) => setError(e.message));
   }, [editId]);
+
+  useEffect(() => {
+    fetch("/api/stats/prs")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: PRData[]) => {
+        const map = new Map<number, PRData>();
+        for (const pr of data) map.set(pr.exerciseId, pr);
+        setPrs(map);
+        setPrsLoaded(true);
+      })
+      .catch(() => setPrsLoaded(true));
+  }, []);
 
   useEffect(() => {
     window.__vgym_dirty = loggedExercises.length > 0;
@@ -83,6 +98,9 @@ function LogContent() {
     if (!selectedExercise) return;
     const existing = loggedExercises.find((le) => le.exercise.id === selectedExercise.id);
     const newSet: WorkoutSet = { reps, weightKg: weight ?? null, durationSeconds: null };
+
+    const newIndex = existing ? existing.sets.length : 0;
+
     if (existing) {
       setLoggedExercises(
         loggedExercises.map((le) =>
@@ -96,6 +114,28 @@ function LogContent() {
         ...loggedExercises,
         { exercise: selectedExercise, sets: [newSet] },
       ]);
+    }
+
+    if (prsLoaded && weight) {
+      const existingPr = prs.get(selectedExercise.id);
+      let badge = "";
+      if (!existingPr || !existingPr.maxWeight) {
+        badge = "PR";
+      } else {
+        if (weight > (existingPr.maxWeight?.value ?? 0)) {
+          badge = "PR";
+        } else if (weight * (1 + reps / 30) > (existingPr.bestE1rm?.value ?? 0)) {
+          badge = "e1RM";
+        } else if (reps > (existingPr.maxReps?.value ?? 0)) {
+          badge = "Reps";
+        } else if ((reps * weight) > (existingPr.maxVolume?.value ?? 0)) {
+          badge = "Volume";
+        }
+      }
+      if (badge) {
+        const key = `${selectedExercise.id}-${newIndex}`;
+        setPrBadges((prev) => ({ ...prev, [key]: badge }));
+      }
     }
   };
 
@@ -250,6 +290,7 @@ function LogContent() {
                     weightKg={s.weightKg ?? null}
                     durationSeconds={s.durationSeconds ?? null}
                     onDelete={() => handleDeleteSet(le.exercise.id, i)}
+                    prBadge={prBadges[`${le.exercise.id}-${i}`] ?? null}
                   />
                 ))}
               </div>

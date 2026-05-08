@@ -10,9 +10,10 @@ interface SetRowProps {
   durationSeconds: number | null;
   onDelete?: () => void;
   readonly?: boolean;
+  prBadge?: string | null;
 }
 
-export default function SetRow({ setNumber, reps, weightKg, durationSeconds, onDelete, readonly }: SetRowProps) {
+export default function SetRow({ setNumber, reps, weightKg, durationSeconds, onDelete, readonly, prBadge }: SetRowProps) {
   return (
     <div className="flex items-center gap-3 py-2 px-3 bg-zinc-900 rounded-lg border border-zinc-800">
       <span className="text-zinc-600 text-sm font-mono w-6">{setNumber}</span>
@@ -25,6 +26,11 @@ export default function SetRow({ setNumber, reps, weightKg, durationSeconds, onD
             <span className="text-emerald-400 font-medium">{weightKg} kg</span>
           )}
         </>
+      )}
+      {prBadge && (
+        <span className="text-emerald-400 bg-emerald-500/10 text-xs font-bold px-1.5 py-0.5 rounded">
+          +{prBadge}
+        </span>
       )}
       {!readonly && onDelete && (
         <button onClick={onDelete} className="text-zinc-600 hover:text-red-400 transition-colors">

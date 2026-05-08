@@ -48,3 +48,63 @@ export interface StatsDataPoint {
   setCount: number;
   e1rm: number;
 }
+
+export interface SummaryData {
+  totalWorkouts: number;
+  totalVolume: number;
+  currentStreak: number;
+  longestStreak: number;
+  daysThisWeek: number;
+  weeklyVolume: number;
+}
+
+export interface CalendarDay {
+  date: string;
+  workoutCount: number;
+  totalVolume: number;
+}
+
+export interface MuscleGroupVolume {
+  muscleGroup: string;
+  volume: number;
+  setCount: number;
+  exerciseCount: number;
+}
+
+export interface StrengthRow {
+  exerciseId: number;
+  name: string;
+  muscleGroup: string;
+  e1rm: number;
+  date: string;
+}
+
+export interface IntensityBucket {
+  range: string;
+  label: string;
+  count: number;
+}
+
+export interface PRValue {
+  value: number;
+  weight?: number;
+  reps?: number;
+  date: string;
+}
+
+export interface PRData {
+  exerciseId: number;
+  name: string;
+  muscleGroup: string;
+  maxWeight: PRValue | null;
+  maxReps: PRValue | null;
+  bestE1rm: PRValue | null;
+  maxVolume: PRValue | null;
+}
+
+export interface VolumePoint {
+  period: string;
+  totalVolume: number;
+  workoutCount: number;
+  totalSets: number;
+}

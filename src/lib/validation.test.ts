@@ -6,6 +6,8 @@ import {
   validateExercises,
   validateCreateWorkoutBody,
   validateUpdateWorkoutBody,
+  validateRoutineBody,
+  validateExerciseBody,
 } from "./validation";
 
 // ── validateDate ──────────────────────────────────────────────
@@ -257,5 +259,82 @@ describe("validateUpdateWorkoutBody", () => {
         exercises: [{ exerciseId: 1, category: "dumbbell", sets: [{ reps: 10 }] }],
       })
     ).toBeNull();
+  });
+});
+
+// ── validateRoutineBody ───────────────────────────────────────
+describe("validateRoutineBody", () => {
+  it("accepts valid name and exerciseIds", () => {
+    expect(validateRoutineBody({ name: "Push Day", exerciseIds: [1, 2, 3] })).toBeNull();
+  });
+
+  it("rejects missing name", () => {
+    expect(validateRoutineBody({ exerciseIds: [1] })).toBe("Name is required");
+  });
+
+  it("rejects empty name", () => {
+    expect(validateRoutineBody({ name: "", exerciseIds: [1] })).toBe("Name is required");
+  });
+
+  it("rejects non-string name", () => {
+    expect(validateRoutineBody({ name: 123, exerciseIds: [1] })).toBe("Name is required");
+  });
+
+  it("rejects whitespace-only name", () => {
+    expect(validateRoutineBody({ name: "   ", exerciseIds: [1] })).toBe("Name is required");
+  });
+
+  it("rejects missing exerciseIds", () => {
+    expect(validateRoutineBody({ name: "Push" })).toBe("At least one exercise is required");
+  });
+
+  it("rejects empty exerciseIds", () => {
+    expect(validateRoutineBody({ name: "Push", exerciseIds: [] })).toBe("At least one exercise is required");
+  });
+
+  it("rejects non-array exerciseIds", () => {
+    expect(validateRoutineBody({ name: "Push", exerciseIds: "abc" })).toBe("At least one exercise is required");
+  });
+
+  it("rejects exerciseIds with non-positive integers", () => {
+    expect(validateRoutineBody({ name: "Push", exerciseIds: [0] })).toBe("Invalid exercise ID in exerciseIds");
+    expect(validateRoutineBody({ name: "Push", exerciseIds: [-1] })).toBe("Invalid exercise ID in exerciseIds");
+    expect(validateRoutineBody({ name: "Push", exerciseIds: [1.5] })).toBe("Invalid exercise ID in exerciseIds");
+    expect(validateRoutineBody({ name: "Push", exerciseIds: ["abc"] })).toBe("Invalid exercise ID in exerciseIds");
+  });
+});
+
+// ── validateExerciseBody ──────────────────────────────────────
+describe("validateExerciseBody", () => {
+  it("accepts valid name", () => {
+    expect(validateExerciseBody({ name: "DB Press", muscleGroup: "Chest", category: "dumbbell" })).toBeNull();
+  });
+
+  it("rejects missing name", () => {
+    expect(validateExerciseBody({})).toBe("Name is required");
+  });
+
+  it("rejects empty name", () => {
+    expect(validateExerciseBody({ name: "" })).toBe("Name is required");
+  });
+
+  it("rejects whitespace-only name", () => {
+    expect(validateExerciseBody({ name: "   " })).toBe("Name is required");
+  });
+
+  it("rejects non-string name", () => {
+    expect(validateExerciseBody({ name: true })).toBe("Name is required");
+  });
+
+  it("rejects invalid muscleGroup type", () => {
+    expect(validateExerciseBody({ name: "Test", muscleGroup: 123 })).toBe("Invalid muscle group");
+  });
+
+  it("rejects invalid category type", () => {
+    expect(validateExerciseBody({ name: "Test", category: 456 })).toBe("Invalid category");
+  });
+
+  it("accepts name without muscleGroup or category", () => {
+    expect(validateExerciseBody({ name: "Test" })).toBeNull();
   });
 });

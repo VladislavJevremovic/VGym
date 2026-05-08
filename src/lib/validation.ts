@@ -80,3 +80,31 @@ export function validateCreateWorkoutBody(body: Record<string, unknown>): string
 export function validateUpdateWorkoutBody(body: Record<string, unknown>): string | null {
   return validateExercises(body.exercises);
 }
+
+export function validateRoutineBody(body: Record<string, unknown>): string | null {
+  if (!body.name || typeof body.name !== "string" || body.name.trim().length === 0) {
+    return "Name is required";
+  }
+  if (!Array.isArray(body.exerciseIds) || body.exerciseIds.length === 0) {
+    return "At least one exercise is required";
+  }
+  for (const id of body.exerciseIds) {
+    if (!Number.isInteger(id) || (id as number) < 1) {
+      return "Invalid exercise ID in exerciseIds";
+    }
+  }
+  return null;
+}
+
+export function validateExerciseBody(body: Record<string, unknown>): string | null {
+  if (!body.name || typeof body.name !== "string" || body.name.trim().length === 0) {
+    return "Name is required";
+  }
+  if (body.muscleGroup && typeof body.muscleGroup !== "string") {
+    return "Invalid muscle group";
+  }
+  if (body.category && typeof body.category !== "string") {
+    return "Invalid category";
+  }
+  return null;
+}
