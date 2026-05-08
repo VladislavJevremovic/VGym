@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Search, Plus, Pencil, Trash2, X, Check } from "lucide-react";
 import type { Exercise } from "@/lib/types";
 import { MUSCLE_GROUPS, CATEGORIES } from "@/lib/constants";
+import UndoToast from "@/components/UndoToast";
 
 interface ExercisePickerProps {
   onSelect: (exercise: Exercise) => void;
@@ -26,7 +27,7 @@ function ManageExercisesModal({ onClose }: { onClose: () => void }) {
   const [editName, setEditName] = useState("");
   const [editMuscleGroup, setEditMuscleGroup] = useState("");
   const [editCategory, setEditCategory] = useState("");
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [undoTarget, setUndoTarget] = useState<Exercise | null>(null);
 
   const fetchExercises = async () => {
     try {
@@ -108,19 +109,48 @@ function ManageExercisesModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  useEffect(() => {
+    if (!undoTarget) return;
+    const timer = setTimeout(() => setUndoTarget(null), 5000);
+    return () => clearTimeout(timer);
+  }, [undoTarget]);
+
+  const handleDelete = (ex: Exercise) => {
     setError("");
+    setAllExercises((prev) => prev.filter((e) => e.id !== ex.id));
+    setUndoTarget(ex);
+    fetch(`/api/exercises/${ex.id}`, { method: "DELETE" })
+      .then((res) => {
+        if (!res.ok) {
+          res.json().then((data) => {
+            setError(data.error || "Failed to delete");
+            setAllExercises((prev) => [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
+            setUndoTarget(null);
+          });
+          return;
+        }
+        cachedExercises = null;
+      })
+      .catch(() => {
+        setAllExercises((prev) => [...prev, ex].sort((a, b) => a.name.localeCompare(b.name)));
+        setUndoTarget(null);
+      });
+  };
+
+  const handleUndoDelete = async (ex: Exercise) => {
+    setUndoTarget(null);
     try {
-      const res = await fetch(`/api/exercises/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete");
-      }
-      setConfirmDeleteId(null);
-      await fetchExercises();
+      const res = await fetch("/api/exercises", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: ex.name, muscleGroup: ex.muscleGroup, category: ex.category }),
+      });
+      if (!res.ok) throw new Error("Failed to restore");
+      const created = await res.json();
+      cachedExercises = null;
+      setAllExercises((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
-      setConfirmDeleteId(null);
     }
   };
 
@@ -234,31 +264,12 @@ function ManageExercisesModal({ onClose }: { onClose: () => void }) {
                       <span className="flex-1 text-sm text-white">{ex.name}</span>
                       <span className="text-xs text-zinc-500">{ex.muscleGroup}</span>
                       <span className="text-xs text-zinc-600 bg-zinc-900 rounded px-1.5 py-0.5">{ex.category}</span>
-                      {confirmDeleteId === ex.id ? (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handleDelete(ex.id)}
-                            className="text-xs text-red-400 hover:text-red-300 px-1.5 py-0.5"
-                          >
-                            Delete?
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="text-xs text-zinc-500 hover:text-white px-1.5 py-0.5"
-                          >
-                            No
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <button onClick={() => startEdit(ex)} className="text-zinc-500 hover:text-emerald-400 transition-colors">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => setConfirmDeleteId(ex.id)} className="text-zinc-500 hover:text-red-400 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
+                      <button onClick={() => startEdit(ex)} className="text-zinc-500 hover:text-emerald-400 transition-colors">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDelete(ex)} className="text-zinc-500 hover:text-red-400 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -266,6 +277,9 @@ function ManageExercisesModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
+        {undoTarget && (
+          <UndoToast label="Exercise deleted" onUndo={() => handleUndoDelete(undoTarget)} />
+        )}
       </div>
     </div>
   );
