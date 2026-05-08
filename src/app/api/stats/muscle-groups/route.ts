@@ -24,8 +24,9 @@ export async function GET(request: Request) {
     .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
     .innerJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
     .where(gte(workouts.date, cutoffStr))
-    .groupBy(exercises.muscleGroup)
-    .orderBy(sql`volume desc`);
+    .groupBy(exercises.muscleGroup);
+
+  rows.sort((a, b) => b.volume - a.volume);
 
   return Response.json(
     rows.map((r) => ({
