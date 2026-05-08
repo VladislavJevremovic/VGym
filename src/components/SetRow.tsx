@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { fmtDuration } from "@/lib/utils";
 
 interface SetRowProps {
   setNumber: number;
@@ -9,13 +10,6 @@ interface SetRowProps {
   durationSeconds: number | null;
   onDelete?: () => void;
   readonly?: boolean;
-}
-
-function fmtDuration(total: number) {
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  if (m === 0) return `${s}s`;
-  return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
 export default function SetRow({ setNumber, reps, weightKg, durationSeconds, onDelete, readonly }: SetRowProps) {

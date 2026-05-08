@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { getDb, buildRoutineExerciseInsertRows } from "@/lib/db";
 import { routines, routineExercises } from "@/drizzle/schema";
 import { eq, asc } from "drizzle-orm";
 
@@ -38,11 +38,7 @@ export async function PUT(
     await tx.update(routines).set({ name }).where(eq(routines.id, parseInt(id)));
     await tx.delete(routineExercises).where(eq(routineExercises.routineId, parseInt(id)));
     await tx.insert(routineExercises).values(
-      exerciseIds.map((exerciseId: number, i: number) => ({
-        routineId: parseInt(id),
-        exerciseId,
-        sortOrder: i + 1,
-      }))
+      buildRoutineExerciseInsertRows(parseInt(id), exerciseIds)
     );
   });
   return Response.json({ success: true });

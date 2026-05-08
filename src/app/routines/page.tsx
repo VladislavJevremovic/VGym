@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Plus, X, Search, Check, Pencil, Trash2, RotateCcw } from "lucide-react";
+import { Play, Plus, X, Search, Check, Pencil, Trash2 } from "lucide-react";
+import ErrorBanner from "@/components/ErrorBanner";
+import UndoToast from "@/components/UndoToast";
 import type { Exercise, Routine } from "@/lib/types";
 import { MUSCLE_GROUPS } from "@/lib/constants";
-
-const groupOrder = MUSCLE_GROUPS;
+import { getErrorMessage } from "@/lib/utils";
 
 function RoutineForm({
   onDone,
@@ -84,7 +85,7 @@ function RoutineForm({
         if (created) onDone(created);
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save routine");
+      setError(getErrorMessage(e));
       setSaving(false);
     }
   };
@@ -123,7 +124,7 @@ function RoutineForm({
           </div>
         </div>
         <div className="p-2">
-          {groupOrder.map((group) => {
+          {MUSCLE_GROUPS.map((group) => {
             const items = grouped[group];
             if (!items?.length) return null;
             return (
@@ -281,11 +282,7 @@ export default function RoutinesPage() {
         )}
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm mb-4">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       {creating && (
         <RoutineForm
@@ -370,13 +367,7 @@ export default function RoutinesPage() {
       </div>
 
       {deletedRoutine && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 flex items-center justify-between shadow-2xl max-w-lg mx-auto">
-          <span className="text-sm text-zinc-200">Routine deleted</span>
-          <button onClick={handleUndoDelete} className="flex items-center gap-1.5 text-emerald-400 text-sm font-medium ml-4 shrink-0">
-            <RotateCcw className="w-3.5 h-3.5" />
-            Undo
-          </button>
-        </div>
+        <UndoToast label="Routine deleted" onUndo={handleUndoDelete} />
       )}
     </div>
   );

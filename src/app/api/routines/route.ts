@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { getDb, buildRoutineExerciseInsertRows } from "@/lib/db";
 import { routines, routineExercises, exercises } from "@/drizzle/schema";
 import { eq, asc, inArray } from "drizzle-orm";
 
@@ -46,11 +46,7 @@ export async function POST(request: Request) {
   const [routine] = await db.insert(routines).values({ name }).returning();
 
   await db.insert(routineExercises).values(
-    exerciseIds.map((id: number, i: number) => ({
-      routineId: routine.id,
-      exerciseId: id,
-      sortOrder: i + 1,
-    }))
+    buildRoutineExerciseInsertRows(routine.id, exerciseIds)
   );
 
   return Response.json(routine, { status: 201 });

@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { getDb, groupSetsByWorkoutExerciseId, buildSetInsertRows } from "@/lib/db";
 import { workouts, workoutExercises, sets, exercises } from "@/drizzle/schema";
 import { eq, desc, asc, inArray, lt } from "drizzle-orm";
 import { validateCreateWorkoutBody } from "@/lib/validation";
@@ -34,11 +34,7 @@ export async function GET(request: Request) {
       ? await db.select().from(sets).where(inArray(sets.workoutExerciseId, weIds)).orderBy(asc(sets.setNumber))
       : [];
 
-    const setsByWeId: Record<number, typeof allSets> = {};
-    for (const s of allSets) {
-      if (!setsByWeId[s.workoutExerciseId]) setsByWeId[s.workoutExerciseId] = [];
-      setsByWeId[s.workoutExerciseId].push(s);
-    }
+    const setsByWeId = groupSetsByWorkoutExerciseId(allSets);
 
     const weByWorkoutId: Record<number, typeof weRows> = {};
     for (const r of weRows) {
@@ -86,15 +82,7 @@ export async function POST(request: Request) {
         .returning();
 
       if (ex.sets?.length) {
-        await tx.insert(sets).values(
-          ex.sets.map((s: { reps: number; weightKg?: number | null; durationSeconds?: number | null }, j: number) => ({
-            workoutExerciseId: we.id,
-            setNumber: j + 1,
-            reps: s.reps,
-            weightKg: s.weightKg ?? null,
-            durationSeconds: s.durationSeconds ?? null,
-          }))
-        );
+        await tx.insert(sets).values(buildSetInsertRows(we.id, ex.sets));
       }
     }
 
@@ -126,11 +114,7 @@ export async function getWorkoutById(id: number) {
     .where(inArray(sets.workoutExerciseId, weIds))
     .orderBy(asc(sets.setNumber));
 
-  const setsByWeId: Record<number, typeof allSets> = {};
-  for (const s of allSets) {
-    if (!setsByWeId[s.workoutExerciseId]) setsByWeId[s.workoutExerciseId] = [];
-    setsByWeId[s.workoutExerciseId].push(s);
-  }
+  const setsByWeId = groupSetsByWorkoutExerciseId(allSets);
 
   return {
     ...workout,

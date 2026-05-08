@@ -5,12 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ExercisePicker from "@/components/ExercisePicker";
 import SetInput from "@/components/SetInput";
 import SetRow from "@/components/SetRow";
+import ErrorBanner from "@/components/ErrorBanner";
 import type { Exercise, Workout, WorkoutSet } from "@/lib/types";
-import { getLocalDateString } from "@/lib/utils";
-
-declare global {
-  interface Window { __vgym_dirty?: boolean; }
-}
+import { getLocalDateString, fmtDuration, mapSetsForApi, getErrorMessage } from "@/lib/utils";
 
 interface LastPerf {
   date: string;
@@ -47,7 +44,7 @@ function LogContent() {
         setLoggedExercises(
           workout.workoutExercises.map((we) => ({
             exercise: we.exercise,
-            sets: we.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
+            sets: mapSetsForApi(we.sets),
           }))
         );
         setNotes(workout.notes ?? "");
@@ -146,7 +143,7 @@ function LogContent() {
         exercises: loggedExercises.map((le) => ({
           exerciseId: le.exercise.id,
           category: le.exercise.category,
-          sets: le.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
+          sets: mapSetsForApi(le.sets),
         })),
       };
 
@@ -173,17 +170,10 @@ function LogContent() {
         setTimeout(() => setSaved(false), 2000);
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save workout");
+      setError(getErrorMessage(e));
     } finally {
       setSaving(false);
     }
-  };
-
-  const fmtDuration = (total: number) => {
-    const m = Math.floor(total / 60);
-    const s = total % 60;
-    if (m === 0) return `${s}s`;
-    return s > 0 ? `${m}m ${s}s` : `${m}m`;
   };
 
   return (
@@ -208,11 +198,7 @@ function LogContent() {
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center mb-4">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       <ExercisePicker onSelect={handleSelectExercise} />
 

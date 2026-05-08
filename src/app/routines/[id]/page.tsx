@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import SetInput from "@/components/SetInput";
 import SetRow from "@/components/SetRow";
+import ErrorBanner from "@/components/ErrorBanner";
 import type { Routine, WorkoutSet } from "@/lib/types";
-import { getLocalDateString } from "@/lib/utils";
+import { getLocalDateString, mapSetsForApi, getErrorMessage } from "@/lib/utils";
 
 interface ExerciseSets {
   exerciseId: number;
@@ -51,9 +52,7 @@ export default function RoutineSessionPage({
   if (error) {
     return (
       <div className="p-4">
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm">
-          {error}
-        </div>
+        <ErrorBanner message={error} />
       </div>
     );
   }
@@ -130,14 +129,14 @@ export default function RoutineSessionPage({
           exercises: nonEmpty.map((es) => ({
             exerciseId: es.exerciseId,
             category: exercises.find((e) => e.exercise?.id === es.exerciseId)?.exercise?.category ?? "",
-            sets: es.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
+            sets: mapSetsForApi(es.sets),
           })),
         }),
       });
       if (!res.ok) throw new Error("Failed to save workout");
       router.push("/history");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save workout");
+      setError(getErrorMessage(e));
       setSaving(false);
     }
   };
@@ -185,11 +184,7 @@ export default function RoutineSessionPage({
         })}
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm mb-4">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       {currentExercise && (
         <>

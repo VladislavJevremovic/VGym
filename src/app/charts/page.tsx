@@ -13,7 +13,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import ExercisePicker from "@/components/ExercisePicker";
+import ErrorBanner from "@/components/ErrorBanner";
 import type { Exercise, StatsDataPoint } from "@/lib/types";
+import { formatDisplayDate, getErrorMessage } from "@/lib/utils";
 
 type Metric = "e1rm" | "maxWeight" | "volume" | "reps" | "maxReps";
 
@@ -43,7 +45,7 @@ export default function ChartsPage() {
       const points = await res.json();
       setData(points);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load stats");
+      setError(getErrorMessage(e));
       setData([]);
     } finally {
       setLoading(false);
@@ -58,11 +60,9 @@ export default function ChartsPage() {
 
       <ExercisePicker onSelect={handleSelect} selectedId={exercise?.id} />
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm mt-4">
-          {error}
-        </div>
-      )}
+      <div className="mt-4">
+        <ErrorBanner message={error} />
+      </div>
 
       {exercise && (
         <div className="mt-6 space-y-4">
@@ -124,10 +124,7 @@ export default function ChartsPage() {
                     <XAxis
                       dataKey="date"
                       tick={{ fill: "#71717a", fontSize: 11 }}
-                      tickFormatter={(d: string) => {
-                        const parts = d.split("-");
-                        return `${parts[1]}/${parts[2]}`;
-                      }}
+                      tickFormatter={formatDisplayDate}
                     />
                     <YAxis tick={{ fill: "#71717a", fontSize: 11 }} />
                     <Tooltip
@@ -153,10 +150,7 @@ export default function ChartsPage() {
                     <XAxis
                       dataKey="date"
                       tick={{ fill: "#71717a", fontSize: 11 }}
-                      tickFormatter={(d: string) => {
-                        const parts = d.split("-");
-                        return `${parts[1]}/${parts[2]}`;
-                      }}
+                      tickFormatter={formatDisplayDate}
                     />
                     <YAxis tick={{ fill: "#71717a", fontSize: 11 }} />
                     <Tooltip

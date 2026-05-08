@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { getDb, buildSetInsertRows } from "@/lib/db";
 import { workouts, workoutExercises, sets } from "@/drizzle/schema";
 import { eq, inArray } from "drizzle-orm";
 import { getWorkoutById } from "../route";
@@ -57,15 +57,7 @@ export async function PUT(
       }).returning();
 
       if (ex.sets?.length) {
-        await tx.insert(sets).values(
-          ex.sets.map((s: { reps: number; weightKg?: number | null; durationSeconds?: number | null }, j: number) => ({
-            workoutExerciseId: we.id,
-            setNumber: j + 1,
-            reps: s.reps,
-            weightKg: s.weightKg ?? null,
-            durationSeconds: s.durationSeconds ?? null,
-          }))
-        );
+        await tx.insert(sets).values(buildSetInsertRows(we.id, ex.sets));
       }
     }
   });

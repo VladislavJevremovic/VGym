@@ -12,7 +12,6 @@ interface ExercisePickerProps {
 
 let cachedExercises: Exercise[] | null = null;
 
-const groupOrder = MUSCLE_GROUPS;
 const listboxId = "exercise-listbox";
 
 export default function ExercisePicker({ onSelect, selectedId }: ExercisePickerProps) {
@@ -148,7 +147,7 @@ export default function ExercisePicker({ onSelect, selectedId }: ExercisePickerP
               </div>
             ) : (
               <div id={listboxId} role="listbox" className="p-2">
-                {groupOrder.map((group) => {
+                {MUSCLE_GROUPS.map((group) => {
                   const items = grouped[group];
                   if (!items?.length) return null;
                   const isExpanded = expandedGroup === group;

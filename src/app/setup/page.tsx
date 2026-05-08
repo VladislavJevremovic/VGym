@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Dumbbell } from "lucide-react";
 import { useState } from "react";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function SetupPage() {
   const [pin, setPin] = useState("");
@@ -36,7 +37,7 @@ export default function SetupPage() {
         setError(data.error || "Something went wrong");
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }

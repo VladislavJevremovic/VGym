@@ -4,10 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Pencil, ListOrdered, Calendar, BarChart3 } from "lucide-react";
 
-declare global {
-  interface Window { __vgym_dirty?: boolean; }
-}
-
 const tabs = [
   { label: "Log", href: "/log", icon: Pencil },
   { label: "Routines", href: "/routines", icon: ListOrdered },

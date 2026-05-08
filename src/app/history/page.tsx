@@ -2,17 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Trash2, RotateCcw, Pencil } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2, Pencil } from "lucide-react";
+import ErrorBanner from "@/components/ErrorBanner";
+import UndoToast from "@/components/UndoToast";
 import type { Workout } from "@/lib/types";
+import { fmtDuration, mapSetsForApi, getErrorMessage } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
-
-function fmtDuration(total: number) {
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  if (m === 0) return `${s}s`;
-  return s > 0 ? `${m}m ${s}s` : `${m}m`;
-}
 
 async function fetchWorkoutsPage(beforeId?: number): Promise<Workout[]> {
   const params = `full=true&limit=${PAGE_SIZE}${beforeId ? `&beforeId=${beforeId}` : ""}`;
@@ -52,7 +48,7 @@ export default function HistoryPage() {
       setWorkouts((prev) => [...prev, ...data]);
       setHasMore(data.length === PAGE_SIZE);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load more");
+      setError(getErrorMessage(e));
     } finally {
       setLoadingMore(false);
     }
@@ -93,7 +89,7 @@ export default function HistoryPage() {
           exercises: target.workoutExercises.map((we) => ({
             exerciseId: we.exercise.id,
             category: we.exercise.category,
-            sets: we.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
+            sets: mapSetsForApi(we.sets),
           })),
         }),
       });
@@ -134,11 +130,7 @@ export default function HistoryPage() {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-6">History</h1>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm mb-4">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       {workouts.length === 0 && !error && (
         <div className="text-center py-12">
@@ -259,13 +251,7 @@ export default function HistoryPage() {
       )}
 
       {undoTarget && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 flex items-center justify-between shadow-2xl max-w-lg mx-auto">
-          <span className="text-sm text-zinc-200">Workout deleted</span>
-          <button onClick={handleUndo} className="flex items-center gap-1.5 text-emerald-400 text-sm font-medium ml-4 shrink-0">
-            <RotateCcw className="w-3.5 h-3.5" />
-            Undo
-          </button>
-        </div>
+        <UndoToast label="Workout deleted" onUndo={handleUndo} />
       )}
     </div>
   );

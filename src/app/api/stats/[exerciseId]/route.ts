@@ -1,7 +1,7 @@
-import { getDb } from "@/lib/db";
+import { getDb, groupSetsByWorkoutExerciseId } from "@/lib/db";
 import { workoutExercises, sets, workouts, exercises } from "@/drizzle/schema";
 import { eq, asc, inArray, gte, and } from "drizzle-orm";
-
+import { formatDate } from "@/lib/utils";
 
 export async function GET(
   request: Request,
@@ -14,7 +14,7 @@ export async function GET(
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}-${String(cutoff.getDate()).padStart(2, "0")}`;
+  const cutoffStr = formatDate(cutoff);
 
   const exId = parseInt(exerciseId);
   if (!exId || exId < 1) return Response.json([]);
@@ -39,11 +39,7 @@ export async function GET(
     .where(inArray(sets.workoutExerciseId, weIds))
     .orderBy(asc(sets.setNumber));
 
-  const setsByWeId: Record<number, typeof allSetRows> = {};
-  for (const s of allSetRows) {
-    if (!setsByWeId[s.workoutExerciseId]) setsByWeId[s.workoutExerciseId] = [];
-    setsByWeId[s.workoutExerciseId].push(s);
-  }
+  const setsByWeId = groupSetsByWorkoutExerciseId(allSetRows);
 
   const dataPoints = weList.map(({ weId, workoutDate }) => {
     const setList = setsByWeId[weId] ?? [];
