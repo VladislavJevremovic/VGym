@@ -24,8 +24,8 @@ export async function PUT(
   const body = await request.json();
   const { date, routineId, notes, exercises: exerciseData } = body;
 
-  if (!date || !exerciseData?.length) {
-    return Response.json({ error: "date and exercises required" }, { status: 400 });
+  if (!exerciseData?.length) {
+    return Response.json({ error: "exercises required" }, { status: 400 });
   }
 
   for (const ex of exerciseData) {
@@ -51,7 +51,7 @@ export async function PUT(
   }
 
   await db.transaction(async (tx) => {
-    await tx.update(workouts).set({ date, routineId: routineId ?? null, notes: notes ?? null }).where(eq(workouts.id, numericId));
+    await tx.update(workouts).set({ date: date ?? existing.date, routineId: routineId ?? null, notes: notes ?? null }).where(eq(workouts.id, numericId));
 
     const existingWe = await tx.select().from(workoutExercises).where(eq(workoutExercises.workoutId, numericId));
     if (existingWe.length > 0) {
