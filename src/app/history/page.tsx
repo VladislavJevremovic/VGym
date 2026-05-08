@@ -221,7 +221,7 @@ export default function HistoryPage() {
                               </p>
                               <div className="flex gap-2 flex-wrap">
                                 {we.sets.length === 1 && we.sets[0].durationSeconds ? (
-                                  <span className="text-xs bg-zinc-800 text-emerald-400 rounded-md px-2 py-1">
+                                  <span className="text-xs bg-zinc-800 text-zinc-300 rounded-md px-2 py-1">
                                     {fmtDuration(we.sets[0].durationSeconds)}
                                   </span>
                                 ) : (
