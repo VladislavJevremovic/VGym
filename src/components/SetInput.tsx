@@ -5,15 +5,20 @@ import { Timer, X } from "lucide-react";
 import { REST_PRESETS, REP_PRESETS } from "@/lib/constants";
 
 interface SetInputProps {
+  category: string;
   onAdd: (reps: number, weight: number | null) => void;
+  onLogCardio: (seconds: number) => void;
 }
 
-export default function SetInput({ onAdd }: SetInputProps) {
+export default function SetInput({ category, onAdd, onLogCardio }: SetInputProps) {
   const [reps, setReps] = useState("");
   const [weight, setWeight] = useState("");
   const [showWeight, setShowWeight] = useState(true);
   const [restSeconds, setRestSeconds] = useState(90);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  const [minutes, setMinutes] = useState("");
+  const [seconds, setSeconds] = useState("");
   const timerId = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -37,7 +42,6 @@ export default function SetInput({ onAdd }: SetInputProps) {
   const commitSet = (r: number, w: number | null) => {
     onAdd(r, w);
     setReps("");
-    // weight intentionally kept — next set usually same weight
     startTimer();
   };
 
@@ -51,7 +55,59 @@ export default function SetInput({ onAdd }: SetInputProps) {
     commitSet(r, weight ? parseFloat(weight) : null);
   };
 
+  const handleLogCardio = () => {
+    const m = parseInt(minutes) || 0;
+    const s = parseInt(seconds) || 0;
+    const total = m * 60 + s;
+    if (total < 1) return;
+    onLogCardio(total);
+    setMinutes("");
+    setSeconds("");
+  };
+
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  if (category === "cardio") {
+    return (
+      <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
+        <div className="flex gap-3 items-end mb-3">
+          <div className="flex-1">
+            <label className="text-xs text-zinc-500 block mb-1">Minutes</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+              placeholder="0"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-white text-xl text-center focus:outline-none focus:border-emerald-400"
+              onKeyDown={(e) => e.key === "Enter" && handleLogCardio()}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="text-xs text-zinc-500 block mb-1">Seconds</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={59}
+              value={seconds}
+              onChange={(e) => setSeconds(e.target.value)}
+              placeholder="0"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-white text-xl text-center focus:outline-none focus:border-emerald-400"
+              onKeyDown={(e) => e.key === "Enter" && handleLogCardio()}
+            />
+          </div>
+          <button
+            onClick={handleLogCardio}
+            className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold rounded-lg px-6 py-3 text-lg transition-colors"
+          >
+            Log
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">

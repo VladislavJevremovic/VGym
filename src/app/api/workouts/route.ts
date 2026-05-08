@@ -74,13 +74,21 @@ export async function POST(request: Request) {
     if (!Number.isInteger(ex.exerciseId) || ex.exerciseId < 1) {
       return Response.json({ error: "Invalid exercise ID" }, { status: 400 });
     }
-    for (const s of ex.sets ?? []) {
-      if (!Number.isInteger(s.reps) || s.reps < 1) {
-        return Response.json({ error: "Reps must be a positive integer" }, { status: 400 });
+    if (ex.category === "cardio") {
+      for (const s of ex.sets ?? []) {
+        if (!Number.isInteger(s.durationSeconds) || s.durationSeconds < 1) {
+          return Response.json({ error: "Duration must be a positive number of seconds" }, { status: 400 });
+        }
       }
-      if (s.weightKg !== null && s.weightKg !== undefined) {
-        if (typeof s.weightKg !== "number" || s.weightKg < 0) {
-          return Response.json({ error: "Weight must be a non-negative number" }, { status: 400 });
+    } else {
+      for (const s of ex.sets ?? []) {
+        if (!Number.isInteger(s.reps) || s.reps < 1) {
+          return Response.json({ error: "Reps must be a positive integer" }, { status: 400 });
+        }
+        if (s.weightKg !== null && s.weightKg !== undefined) {
+          if (typeof s.weightKg !== "number" || s.weightKg < 0) {
+            return Response.json({ error: "Weight must be a non-negative number" }, { status: 400 });
+          }
         }
       }
     }
@@ -101,11 +109,12 @@ export async function POST(request: Request) {
 
       if (ex.sets?.length) {
         await tx.insert(sets).values(
-          ex.sets.map((s: { reps: number; weightKg?: number | null }, j: number) => ({
+          ex.sets.map((s: { reps: number; weightKg?: number | null; durationSeconds?: number | null }, j: number) => ({
             workoutExerciseId: we.id,
             setNumber: j + 1,
             reps: s.reps,
             weightKg: s.weightKg ?? null,
+            durationSeconds: s.durationSeconds ?? null,
           }))
         );
       }

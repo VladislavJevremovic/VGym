@@ -78,7 +78,17 @@ export default function RoutineSessionPage({
     setExerciseSets(
       exerciseSets.map((es) =>
         es.exerciseId === currentExercise?.id
-          ? { ...es, sets: [...es.sets, { reps, weightKg: weight ?? null }] }
+          ? { ...es, sets: [...es.sets, { reps, weightKg: weight ?? null, durationSeconds: null }] }
+          : es
+      )
+    );
+  };
+
+  const handleLogCardio = (durationSeconds: number) => {
+    setExerciseSets(
+      exerciseSets.map((es) =>
+        es.exerciseId === currentExercise?.id
+          ? { ...es, sets: [{ reps: 0, weightKg: null, durationSeconds }] }
           : es
       )
     );
@@ -119,7 +129,8 @@ export default function RoutineSessionPage({
           routineId: routine.id,
           exercises: nonEmpty.map((es) => ({
             exerciseId: es.exerciseId,
-            sets: es.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg })),
+            category: exercises.find((e) => e.exercise?.id === es.exerciseId)?.exercise?.category ?? "",
+            sets: es.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
           })),
         }),
       });
@@ -187,7 +198,7 @@ export default function RoutineSessionPage({
             <span className="text-xs text-zinc-500">{currentExercise.muscleGroup}</span>
           </div>
 
-          <SetInput onAdd={handleAddSet} />
+          <SetInput category={currentExercise.category} onAdd={handleAddSet} onLogCardio={handleLogCardio} />
 
           {currentSets.length > 0 && (
             <div className="mt-4 space-y-1">
@@ -197,6 +208,7 @@ export default function RoutineSessionPage({
                   setNumber={i + 1}
                   reps={s.reps}
                   weightKg={s.weightKg}
+                  durationSeconds={s.durationSeconds ?? null}
                   onDelete={() => handleDeleteSet(i)}
                 />
               ))}

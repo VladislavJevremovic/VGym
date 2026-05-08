@@ -14,7 +14,7 @@ declare global {
 
 interface LastPerf {
   date: string;
-  sets: { reps: number; weightKg: number | null }[];
+  sets: { reps: number; weightKg: number | null; durationSeconds: number | null }[];
 }
 
 interface LoggedExercise {
@@ -47,7 +47,7 @@ function LogContent() {
         setLoggedExercises(
           workout.workoutExercises.map((we) => ({
             exercise: we.exercise,
-            sets: we.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg })),
+            sets: we.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
           }))
         );
         setNotes(workout.notes ?? "");
@@ -85,18 +85,39 @@ function LogContent() {
   const handleAddSet = (reps: number, weight: number | null) => {
     if (!selectedExercise) return;
     const existing = loggedExercises.find((le) => le.exercise.id === selectedExercise.id);
+    const newSet: WorkoutSet = { reps, weightKg: weight ?? null, durationSeconds: null };
     if (existing) {
       setLoggedExercises(
         loggedExercises.map((le) =>
           le.exercise.id === selectedExercise.id
-            ? { ...le, sets: [...le.sets, { reps, weightKg: weight ?? null }] }
+            ? { ...le, sets: [...le.sets, newSet] }
             : le
         )
       );
     } else {
       setLoggedExercises([
         ...loggedExercises,
-        { exercise: selectedExercise, sets: [{ reps, weightKg: weight ?? null }] },
+        { exercise: selectedExercise, sets: [newSet] },
+      ]);
+    }
+  };
+
+  const handleLogCardio = (durationSeconds: number) => {
+    if (!selectedExercise) return;
+    const existing = loggedExercises.find((le) => le.exercise.id === selectedExercise.id);
+    const newSet: WorkoutSet = { reps: 0, weightKg: null, durationSeconds };
+    if (existing) {
+      setLoggedExercises(
+        loggedExercises.map((le) =>
+          le.exercise.id === selectedExercise.id
+            ? { ...le, sets: [newSet] }
+            : le
+        )
+      );
+    } else {
+      setLoggedExercises([
+        ...loggedExercises,
+        { exercise: selectedExercise, sets: [newSet] },
       ]);
     }
   };
@@ -124,7 +145,8 @@ function LogContent() {
         notes: notes.trim() || null,
         exercises: loggedExercises.map((le) => ({
           exerciseId: le.exercise.id,
-          sets: le.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg })),
+          category: le.exercise.category,
+          sets: le.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
         })),
       };
 
@@ -155,6 +177,13 @@ function LogContent() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const fmtDuration = (total: number) => {
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    if (m === 0) return `${s}s`;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
   };
 
   return (
@@ -192,7 +221,7 @@ function LogContent() {
           {lastPerfLoading && (
             <div className="mb-3 h-8 bg-zinc-900 rounded-lg animate-pulse" />
           )}
-          {!lastPerfLoading && lastPerf && (
+          {!lastPerfLoading && lastPerf && selectedExercise.category !== "cardio" && (
             <div className="mb-3 bg-zinc-900/60 border border-zinc-800 rounded-lg px-3 py-2">
               <p className="text-xs text-zinc-500 mb-1">
                 Last:{" "}
@@ -204,7 +233,7 @@ function LogContent() {
               <div className="flex gap-2 flex-wrap">
                 {lastPerf.sets.map((s, i) => (
                   <span key={i} className="text-xs text-zinc-400 bg-zinc-800 rounded px-2 py-0.5">
-                    {s.reps}{s.weightKg ? ` × ${s.weightKg}kg` : " reps"}
+                    {s.durationSeconds ? fmtDuration(s.durationSeconds) : `${s.reps}${s.weightKg ? ` × ${s.weightKg}kg` : " reps"}`}
                   </span>
                 ))}
               </div>
@@ -213,7 +242,7 @@ function LogContent() {
           {!lastPerfLoading && !lastPerf && (
             <p className="text-xs text-zinc-600 mb-3">No previous data for this exercise</p>
           )}
-          <SetInput onAdd={handleAddSet} />
+          <SetInput category={selectedExercise.category} onAdd={handleAddSet} onLogCardio={handleLogCardio} />
         </div>
       )}
 
@@ -233,6 +262,7 @@ function LogContent() {
                     setNumber={i + 1}
                     reps={s.reps}
                     weightKg={s.weightKg ?? null}
+                    durationSeconds={s.durationSeconds ?? null}
                     onDelete={() => handleDeleteSet(le.exercise.id, i)}
                   />
                 ))}

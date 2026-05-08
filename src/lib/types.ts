@@ -22,6 +22,7 @@ export interface WorkoutSet {
   setNumber?: number;
   reps: number;
   weightKg: number | null;
+  durationSeconds: number | null;
 }
 
 export interface WorkoutExercise {

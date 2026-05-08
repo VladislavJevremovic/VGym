@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { workoutExercises, sets, workouts } from "@/drizzle/schema";
+import { workoutExercises, sets, workouts, exercises } from "@/drizzle/schema";
 import { eq, asc, inArray, gte, and } from "drizzle-orm";
 
 
@@ -18,6 +18,9 @@ export async function GET(
 
   const exId = parseInt(exerciseId);
   if (!exId || exId < 1) return Response.json([]);
+
+  const [ex] = await db.select({ category: exercises.category }).from(exercises).where(eq(exercises.id, exId));
+  if (!ex || ex.category === "cardio") return Response.json([]);
 
   // Filter by date in SQL — no JS post-filtering needed
   const weList = await db

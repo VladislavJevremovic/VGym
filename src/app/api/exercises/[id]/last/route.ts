@@ -30,6 +30,6 @@ export async function GET(
 
   return Response.json({
     date: lastWe.workoutDate,
-    sets: setList.map((s) => ({ reps: s.reps, weightKg: s.weightKg })),
+    sets: setList.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
   });
 }

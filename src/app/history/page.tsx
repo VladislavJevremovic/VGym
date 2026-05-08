@@ -7,6 +7,13 @@ import type { Workout } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
+function fmtDuration(total: number) {
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (m === 0) return `${s}s`;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
 async function fetchWorkoutsPage(beforeId?: number): Promise<Workout[]> {
   const params = `full=true&limit=${PAGE_SIZE}${beforeId ? `&beforeId=${beforeId}` : ""}`;
   const res = await fetch(`/api/workouts?${params}`);
@@ -85,7 +92,8 @@ export default function HistoryPage() {
           notes: target.notes,
           exercises: target.workoutExercises.map((we) => ({
             exerciseId: we.exercise.id,
-            sets: we.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg })),
+            category: we.exercise.category,
+            sets: we.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, durationSeconds: s.durationSeconds })),
           })),
         }),
       });
@@ -212,14 +220,20 @@ export default function HistoryPage() {
                                 {we.exercise.name}
                               </p>
                               <div className="flex gap-2 flex-wrap">
-                                {we.sets.map((s) => (
-                                  <span
-                                    key={s.id}
-                                    className="text-xs bg-zinc-800 text-zinc-300 rounded-md px-2 py-1"
-                                  >
-                                    {s.reps}{s.weightKg ? ` × ${s.weightKg}kg` : " reps"}
+                                {we.sets.length === 1 && we.sets[0].durationSeconds ? (
+                                  <span className="text-xs bg-zinc-800 text-emerald-400 rounded-md px-2 py-1">
+                                    {fmtDuration(we.sets[0].durationSeconds)}
                                   </span>
-                                ))}
+                                ) : (
+                                  we.sets.map((s) => (
+                                    <span
+                                      key={s.id}
+                                      className="text-xs bg-zinc-800 text-zinc-300 rounded-md px-2 py-1"
+                                    >
+                                      {s.reps}{s.weightKg ? ` × ${s.weightKg}kg` : " reps"}
+                                    </span>
+                                  ))
+                                )}
                               </div>
                             </div>
                           ))}

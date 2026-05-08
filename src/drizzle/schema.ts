@@ -47,6 +47,7 @@ export const sets = sqliteTable("sets", {
   setNumber: integer("set_number").notNull(),
   reps: integer("reps").notNull(),
   weightKg: real("weight_kg"),
+  durationSeconds: integer("duration_seconds"),
 }, (table) => [
   index("idx_s_workout_exercise_id").on(table.workoutExerciseId),
 ]);

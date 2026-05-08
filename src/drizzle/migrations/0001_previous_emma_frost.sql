@@ -1,0 +1,1 @@
+ALTER TABLE `sets` ADD `duration_seconds` integer;
