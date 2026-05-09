@@ -154,7 +154,7 @@ export default function SetInput({ category, onAdd, onLogCardio, previousWeight 
       )}
 
       <div className="flex gap-3 items-end mb-3">
-        <div className="w-20 shrink-0">
+        <div className="w-14 shrink-0">
           <label className="text-xs text-zinc-500 block mb-1">Reps</label>
           <input
             type="number"
