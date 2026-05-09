@@ -8,9 +8,10 @@ interface SetInputProps {
   category: string;
   onAdd: (reps: number, weight: number | null) => void;
   onLogCardio: (seconds: number) => void;
+  previousWeight?: number | null;
 }
 
-export default function SetInput({ category, onAdd, onLogCardio }: SetInputProps) {
+export default function SetInput({ category, onAdd, onLogCardio, previousWeight }: SetInputProps) {
   const [reps, setReps] = useState("");
   const [weight, setWeight] = useState("");
   const [showWeight, setShowWeight] = useState(true);
@@ -52,7 +53,7 @@ export default function SetInput({ category, onAdd, onLogCardio }: SetInputProps
   };
 
   const addFromPreset = (r: number) => {
-    commitSet(r, weight ? parseFloat(weight) : null);
+    setReps(String(r));
   };
 
   const handleLogCardio = () => {
@@ -168,22 +169,43 @@ export default function SetInput({ category, onAdd, onLogCardio }: SetInputProps
         {showWeight && (
           <div className="flex-1">
             <label className="text-xs text-zinc-500 block mb-1">Weight (kg)</label>
-            <input
-              type="number"
-              inputMode="decimal"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              placeholder="0"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-white text-xl text-center focus:outline-none focus:border-emerald-400"
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            />
+            <div className="flex gap-1">
+              <input
+                type="number"
+                inputMode="decimal"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="0"
+                className="flex-1 w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3 text-white text-xl text-center focus:outline-none focus:border-emerald-400"
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              />
+              {previousWeight != null && (
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setWeight(String(previousWeight - 5))}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-lg px-2.5 py-3 text-sm font-medium transition-colors"
+                    title="5 kg less than last set"
+                  >
+                    −5
+                  </button>
+                  <button
+                    onClick={() => setWeight(String(previousWeight + 5))}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-lg px-2.5 py-3 text-sm font-medium transition-colors"
+                    title="5 kg more than last set"
+                  >
+                    +5
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
         <button
           onClick={() => setShowWeight(!showWeight)}
-          className="text-xs text-zinc-500 px-2 py-3"
+          className={`text-xs px-2 py-3 transition-colors ${showWeight ? "text-zinc-400" : "text-zinc-700"}`}
+          title={showWeight ? "Hide weight" : "Show weight"}
         >
-          {showWeight ? "−kg" : "+kg"}
+          kg
         </button>
       </div>
 

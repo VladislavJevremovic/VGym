@@ -100,7 +100,7 @@ export default function SettingsPage() {
         <p className="text-zinc-500 text-sm mb-4">
           Import a JSON backup. This replaces all existing data.
         </p>
-        <label className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg px-4 py-3 text-sm font-medium transition-colors cursor-pointer">
+        <label className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg px-4 py-3 text-sm font-medium transition-colors cursor-pointer">
           <Upload className="w-4 h-4" />
           {importing ? "Importing..." : "Import Backup"}
           <input

@@ -78,6 +78,19 @@ function LogContent() {
     };
   }, [loggedExercises.length]);
 
+  const getPreviousWeight = (exerciseId: number): number | null => {
+    const current = loggedExercises.find((le) => le.exercise.id === exerciseId)?.sets;
+    if (current && current.length > 0) {
+      const last = current[current.length - 1];
+      if (last.weightKg != null) return last.weightKg;
+    }
+    if (lastPerf && lastPerf.sets.length > 0) {
+      const last = lastPerf.sets[lastPerf.sets.length - 1];
+      if (last.weightKg != null) return last.weightKg;
+    }
+    return null;
+  };
+
   const handleSelectExercise = async (ex: Exercise) => {
     setSelectedExercise(ex);
     setLastPerf(null);
@@ -268,7 +281,7 @@ function LogContent() {
           {!lastPerfLoading && !lastPerf && (
             <p className="text-xs text-zinc-600 mb-3">No previous data for this exercise</p>
           )}
-          <SetInput category={selectedExercise.category} onAdd={handleAddSet} onLogCardio={handleLogCardio} />
+          <SetInput category={selectedExercise.category} onAdd={handleAddSet} onLogCardio={handleLogCardio} previousWeight={getPreviousWeight(selectedExercise.id)} />
         </div>
       )}
 
