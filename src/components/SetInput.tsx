@@ -23,6 +23,10 @@ export default function SetInput({ category, onAdd, onLogCardio, previousWeight 
   const timerId = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    if (previousWeight != null) setWeight(String(previousWeight));
+  }, [previousWeight]);
+
+  useEffect(() => {
     if (timeLeft === null || timeLeft <= 0) {
       if (timerId.current) { clearInterval(timerId.current); timerId.current = null; }
       return;
