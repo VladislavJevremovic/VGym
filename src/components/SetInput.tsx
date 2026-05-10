@@ -23,6 +23,7 @@ export default function SetInput({ category, onAdd, onLogCardio, previousWeight 
   const timerId = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (previousWeight != null) setWeight(String(previousWeight));
   }, [previousWeight]);
 

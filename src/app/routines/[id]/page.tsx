@@ -10,6 +10,11 @@ import ExercisePicker from "@/components/ExercisePicker";
 import type { Routine, WorkoutSet, Exercise } from "@/lib/types";
 import { getLocalDateString, mapSetsForApi, getErrorMessage } from "@/lib/utils";
 
+interface LastPerf {
+  date: string;
+  sets: { reps: number; weightKg: number | null; durationSeconds: number | null }[];
+}
+
 interface ExerciseSets {
   exerciseId: number;
   sets: WorkoutSet[];
@@ -27,6 +32,7 @@ export default function RoutineSessionPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editingStep, setEditingStep] = useState<number | null>(null);
+  const [lastPerf, setLastPerf] = useState<LastPerf | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -51,6 +57,31 @@ export default function RoutineSessionPage({
       .catch((e: Error) => setError(e.message));
   }, [id]);
 
+  const exercises = (routine?.exercises ?? []).filter((e) => e.exercise);
+  const currentExercise = exercises[currentStep]?.exercise;
+  const isLast = currentStep === exercises.length - 1;
+
+  useEffect(() => {
+    if (!currentExercise?.id) return;
+    fetch(`/api/exercises/${currentExercise.id}/last`)
+      .then((r) => r.ok ? r.json() : null)
+      .then(setLastPerf)
+      .catch(() => {});
+  }, [currentExercise?.id]);
+
+  const getPreviousWeight = (exerciseId: number): number | null => {
+    const current = exerciseSets.find((es) => es.exerciseId === exerciseId)?.sets;
+    if (current && current.length > 0) {
+      const last = current[current.length - 1];
+      if (last.weightKg != null) return last.weightKg;
+    }
+    if (lastPerf && lastPerf.sets.length > 0) {
+      const last = lastPerf.sets[lastPerf.sets.length - 1];
+      if (last.weightKg != null) return last.weightKg;
+    }
+    return null;
+  };
+
   if (error) {
     return (
       <div className="p-4">
@@ -66,10 +97,6 @@ export default function RoutineSessionPage({
       </div>
     );
   }
-
-  const exercises = routine.exercises.filter((e) => e.exercise);
-  const currentExercise = exercises[currentStep]?.exercise;
-  const isLast = currentStep === exercises.length - 1;
 
   const currentSets = exerciseSets.find(
     (es) => es.exerciseId === currentExercise?.id
@@ -229,7 +256,7 @@ export default function RoutineSessionPage({
             )}
           </div>
 
-          <SetInput category={currentExercise.category} onAdd={handleAddSet} onLogCardio={handleLogCardio} />
+          <SetInput category={currentExercise.category} onAdd={handleAddSet} onLogCardio={handleLogCardio} previousWeight={getPreviousWeight(currentExercise.id)} />
 
           {currentSets.length > 0 && (
             <div className="mt-4 space-y-1">
