@@ -2,6 +2,7 @@ import { getDb, groupSetsByWorkoutExerciseId } from "@/lib/db";
 import { workoutExercises, sets, workouts, exercises } from "@/drizzle/schema";
 import { eq, asc, inArray, gte, and } from "drizzle-orm";
 import { formatDate } from "@/lib/utils";
+import { computeE1rm } from "@/lib/stats";
 
 export async function GET(
   request: Request,
@@ -16,8 +17,8 @@ export async function GET(
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = formatDate(cutoff);
 
-  const exId = parseInt(exerciseId);
-  if (!exId || exId < 1) return Response.json([]);
+  const exId = parseInt(exerciseId, 10);
+  if (isNaN(exId) || exId < 1) return Response.json([]);
 
   const [ex] = await db.select({ category: exercises.category }).from(exercises).where(eq(exercises.id, exId));
   if (!ex || ex.category === "cardio") return Response.json([]);
@@ -50,7 +51,7 @@ export async function GET(
     const setCount = setList.length;
     const topWeightSet = setList.find((s) => s.weightKg === maxWeight);
     const topReps = topWeightSet?.reps || 0;
-    const e1rm = maxWeight && topReps ? maxWeight * (1 + topReps / 30) : 0;
+    const e1rm = maxWeight && topReps ? computeE1rm(maxWeight, topReps) : 0;
     return {
       date: workoutDate,
       reps,

@@ -7,8 +7,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const exId = parseInt(id);
-  if (!exId || exId < 1) return Response.json(null);
+  const exId = parseInt(id, 10);
+  if (isNaN(exId) || exId < 1) return Response.json(null);
 
   const db = getDb();
 

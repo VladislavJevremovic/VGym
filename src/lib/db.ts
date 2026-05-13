@@ -1,5 +1,6 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
+import { inArray } from "drizzle-orm";
 import * as schema from "@/drizzle/schema";
 
 let dbInstance: ReturnType<typeof drizzle> | null = null;
@@ -51,4 +52,11 @@ export function buildRoutineExerciseInsertRows(routineId: number, exerciseIds: n
     exerciseId,
     sortOrder: i + 1,
   }));
+}
+
+export async function verifyExerciseIds(ids: number[]): Promise<number[]> {
+  const db = getDb();
+  const found = await db.select({ id: schema.exercises.id }).from(schema.exercises).where(inArray(schema.exercises.id, ids));
+  const foundSet = new Set(found.map((r) => r.id));
+  return ids.filter((id) => !foundSet.has(id));
 }

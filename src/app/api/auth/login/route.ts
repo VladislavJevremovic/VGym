@@ -2,7 +2,8 @@ import { setAuthCookie } from "@/lib/auth";
 import { checkRateLimit, recordFailedAttempt, clearAttempts } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "local";
+  const forwarded = request.headers.get("x-forwarded-for");
+  const ip = forwarded ? forwarded.split(",").pop()!.trim() : "local";
   const key = `pin:${ip}`;
 
   const { allowed, retryAfterMs } = checkRateLimit(key);

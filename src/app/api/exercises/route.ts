@@ -28,6 +28,7 @@ export async function POST(request: Request) {
     if (e instanceof LibsqlError && e.message?.includes("UNIQUE")) {
       return Response.json({ error: "Exercise already exists" }, { status: 409 });
     }
+    console.error("[exercises POST]", e);
     throw e;
   }
 }

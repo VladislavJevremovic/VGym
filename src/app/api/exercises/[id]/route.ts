@@ -10,8 +10,8 @@ export async function PUT(
 ) {
   const db = getDb();
   const { id } = await params;
-  const numericId = parseInt(id);
-  if (!numericId || numericId < 1) return Response.json({ error: "Invalid ID" }, { status: 400 });
+  const numericId = parseInt(id, 10);
+  if (isNaN(numericId) || numericId < 1) return Response.json({ error: "Invalid ID" }, { status: 400 });
 
   const [existing] = await db.select().from(exercises).where(eq(exercises.id, numericId));
   if (!existing) return Response.json({ error: "Not found" }, { status: 404 });
@@ -34,6 +34,7 @@ export async function PUT(
     if (e instanceof LibsqlError && e.message?.includes("UNIQUE")) {
       return Response.json({ error: "Exercise name already exists" }, { status: 409 });
     }
+    console.error("[exercises PUT]", e);
     throw e;
   }
 }
@@ -44,8 +45,8 @@ export async function DELETE(
 ) {
   const db = getDb();
   const { id } = await params;
-  const numericId = parseInt(id);
-  if (!numericId || numericId < 1) return Response.json({ error: "Invalid ID" }, { status: 400 });
+  const numericId = parseInt(id, 10);
+  if (isNaN(numericId) || numericId < 1) return Response.json({ error: "Invalid ID" }, { status: 400 });
 
   const [existing] = await db.select().from(exercises).where(eq(exercises.id, numericId));
   if (!existing) return Response.json({ error: "Not found" }, { status: 404 });

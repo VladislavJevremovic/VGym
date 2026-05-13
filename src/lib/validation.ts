@@ -1,3 +1,5 @@
+import { MUSCLE_GROUPS, CATEGORIES } from "./constants";
+
 export function validateDate(date: unknown): string | null {
   if (!date || typeof date !== "string") {
     return "date is required";
@@ -100,11 +102,15 @@ export function validateExerciseBody(body: Record<string, unknown>): string | nu
   if (!body.name || typeof body.name !== "string" || body.name.trim().length === 0) {
     return "Name is required";
   }
-  if (body.muscleGroup && typeof body.muscleGroup !== "string") {
-    return "Invalid muscle group";
+  if (body.muscleGroup !== undefined) {
+    if (typeof body.muscleGroup !== "string" || !(MUSCLE_GROUPS as readonly string[]).includes(body.muscleGroup)) {
+      return `Invalid muscle group. Must be one of: ${MUSCLE_GROUPS.join(", ")}`;
+    }
   }
-  if (body.category && typeof body.category !== "string") {
-    return "Invalid category";
+  if (body.category !== undefined) {
+    if (typeof body.category !== "string" || !(CATEGORIES as readonly string[]).includes(body.category)) {
+      return `Invalid category. Must be one of: ${CATEGORIES.join(", ")}`;
+    }
   }
   return null;
 }

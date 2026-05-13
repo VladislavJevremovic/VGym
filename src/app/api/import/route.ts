@@ -195,6 +195,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (e: unknown) {
+    console.error("[import]", e);
     const message = e instanceof Error ? e.message : String(e);
     return Response.json({ error: message }, { status: 500 });
   }

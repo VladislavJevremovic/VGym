@@ -1,7 +1,8 @@
 import { getDb } from "@/lib/db";
 import { workouts, workoutExercises, sets, exercises } from "@/drizzle/schema";
-import { eq, gte, inArray, and, asc, sql } from "drizzle-orm";
+import { eq, gte, and, sql } from "drizzle-orm";
 import { formatDate } from "@/lib/utils";
+import { computeE1rm } from "@/lib/stats";
 
 export async function GET(request: Request) {
   const db = getDb();
@@ -12,64 +13,47 @@ export async function GET(request: Request) {
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = formatDate(cutoff);
 
-  const allExercises = await db
-    .select()
-    .from(exercises)
-    .where(sql`${exercises.category} != 'cardio'`);
+  const rows = await db
+    .select({
+      exerciseId: exercises.id,
+      name: exercises.name,
+      muscleGroup: exercises.muscleGroup,
+      date: workouts.date,
+      reps: sets.reps,
+      weightKg: sets.weightKg,
+    })
+    .from(sets)
+    .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
+    .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
+    .innerJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
+    .where(and(
+      sql`${exercises.category} != 'cardio'`,
+      gte(workouts.date, cutoffStr),
+    ));
 
-  if (allExercises.length === 0) return Response.json([]);
+  if (rows.length === 0) return Response.json([]);
 
-  const result = [];
+  const bestByExercise = new Map<number, { name: string; muscleGroup: string; e1rm: number; date: string }>();
 
-  for (const ex of allExercises) {
-    const weList = await db
-      .select({ weId: workoutExercises.id, date: workouts.date })
-      .from(workoutExercises)
-      .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-      .where(and(eq(workoutExercises.exerciseId, ex.id), gte(workouts.date, cutoffStr)))
-      .orderBy(asc(workouts.date));
-
-    if (weList.length === 0) continue;
-
-    const weIds = weList.map((w) => w.weId);
-    const allSets = await db
-      .select()
-      .from(sets)
-      .where(inArray(sets.workoutExerciseId, weIds))
-      .orderBy(asc(sets.setNumber));
-
-    const setsByWeId: Record<number, typeof allSets> = {};
-    for (const s of allSets) {
-      if (!setsByWeId[s.workoutExerciseId]) setsByWeId[s.workoutExerciseId] = [];
-      setsByWeId[s.workoutExerciseId].push(s);
-    }
-
-    let bestE1rm = 0;
-    let bestDate = "";
-
-    for (const we of weList) {
-      const setList = setsByWeId[we.weId] ?? [];
-      for (const s of setList) {
-        if (s.weightKg && s.reps) {
-          const e1rm = s.weightKg * (1 + s.reps / 30);
-          if (e1rm > bestE1rm) {
-            bestE1rm = e1rm;
-            bestDate = we.date;
-          }
-        }
-      }
-    }
-
-    if (bestE1rm > 0) {
-      result.push({
-        exerciseId: ex.id,
-        name: ex.name,
-        muscleGroup: ex.muscleGroup,
-        e1rm: Math.round(bestE1rm * 10) / 10,
-        date: bestDate,
+  for (const r of rows) {
+    if (!r.weightKg || !r.reps) continue;
+    const e1rm = computeE1rm(r.weightKg, r.reps);
+    const prev = bestByExercise.get(r.exerciseId);
+    if (!prev || e1rm > prev.e1rm) {
+      bestByExercise.set(r.exerciseId, {
+        name: r.name,
+        muscleGroup: r.muscleGroup,
+        e1rm,
+        date: r.date,
       });
     }
   }
+
+  const result = Array.from(bestByExercise.entries()).map(([exerciseId, v]) => ({
+    exerciseId,
+    ...v,
+    e1rm: Math.round(v.e1rm * 10) / 10,
+  }));
 
   result.sort((a, b) => b.e1rm - a.e1rm);
   return Response.json(result);

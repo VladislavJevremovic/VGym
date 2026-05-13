@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { workouts, workoutExercises, sets, exercises } from "@/drizzle/schema";
 import { eq, inArray, asc, sql } from "drizzle-orm";
+import { computeE1rm } from "@/lib/stats";
 
 export async function GET() {
   const db = getDb();
@@ -84,7 +85,7 @@ export async function GET() {
       if (volume > maxVolume) { maxVolume = volume; maxVolumeDate = date; }
 
       if (w > 0 && r > 0) {
-        const e1rm = w * (1 + r / 30);
+        const e1rm = computeE1rm(w, r);
         if (e1rm > bestE1rm) { bestE1rm = e1rm; bestE1rmDate = date; }
       }
     }

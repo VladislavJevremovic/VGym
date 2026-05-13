@@ -1,4 +1,4 @@
-import { getDb, groupSetsByWorkoutExerciseId, buildSetInsertRows } from "@/lib/db";
+import { getDb, groupSetsByWorkoutExerciseId, buildSetInsertRows, verifyExerciseIds } from "@/lib/db";
 import { workouts, workoutExercises, sets, exercises } from "@/drizzle/schema";
 import { eq, desc, asc, inArray, lt } from "drizzle-orm";
 import { validateCreateWorkoutBody } from "@/lib/validation";
@@ -66,6 +66,12 @@ export async function POST(request: Request) {
   const bodyErr = validateCreateWorkoutBody(body);
   if (bodyErr) {
     return Response.json({ error: bodyErr }, { status: 400 });
+  }
+
+  const exerciseIds = exerciseData.map((e: { exerciseId: number }) => e.exerciseId);
+  const missingIds = await verifyExerciseIds(exerciseIds);
+  if (missingIds.length > 0) {
+    return Response.json({ error: `Invalid exercise IDs: ${missingIds.join(", ")}` }, { status: 400 });
   }
 
   const workoutId = await db.transaction(async (tx) => {

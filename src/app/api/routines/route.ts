@@ -1,4 +1,4 @@
-import { getDb, buildRoutineExerciseInsertRows } from "@/lib/db";
+import { getDb, buildRoutineExerciseInsertRows, verifyExerciseIds } from "@/lib/db";
 import { routines, routineExercises, exercises } from "@/drizzle/schema";
 import { eq, asc, inArray } from "drizzle-orm";
 
@@ -41,6 +41,11 @@ export async function POST(request: Request) {
   const { name, exerciseIds } = await request.json();
   if (!name || !exerciseIds?.length) {
     return Response.json({ error: "Name and exerciseIds required" }, { status: 400 });
+  }
+
+  const missingIds = await verifyExerciseIds(exerciseIds);
+  if (missingIds.length > 0) {
+    return Response.json({ error: `Invalid exercise IDs: ${missingIds.join(", ")}` }, { status: 400 });
   }
 
   const [routine] = await db.insert(routines).values({ name }).returning();

@@ -1,4 +1,5 @@
 const SHELL_URLS = ["/log", "/routines", "/history", "/stats"];
+const API_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 let CACHE_NAME;
 
 // --- IndexedDB helpers for offline queue + API cache ---
@@ -23,11 +24,32 @@ function openDb() {
   });
 }
 
+const MAX_MUTATION_RETRIES = 5;
+
 function storeMutation(method, url, headers, body) {
   return openDb().then((db) => {
     const tx = db.transaction("mutations", "readwrite");
-    tx.objectStore("mutations").add({ method, url, headers, body, timestamp: Date.now() });
+    tx.objectStore("mutations").add({ method, url, headers, body, timestamp: Date.now(), retryCount: 0 });
     return new Promise((resolve, reject) => {
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  });
+}
+
+function updateMutationRetry(id, retryCount) {
+  return openDb().then((db) => {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("mutations", "readwrite");
+      const store = tx.objectStore("mutations");
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const mutation = req.result;
+        if (mutation) {
+          mutation.retryCount = retryCount;
+          store.put(mutation);
+        }
+      };
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = () => { db.close(); reject(tx.error); };
     });
@@ -85,10 +107,14 @@ function getCachedApiResponse(url) {
         db.close();
         const entry = req.result;
         if (!entry) { resolve(null); return; }
+        const age = Date.now() - (entry.timestamp || 0);
+        const stale = age > API_CACHE_MAX_AGE_MS;
+        const headers = [...(entry.headers || []), ["X-Cache-Age", String(Math.round(age / 1000))]];
+        if (stale) headers.push(["X-Cache-Stale", "true"]);
         resolve(new Response(entry.body, {
           status: entry.status,
           statusText: entry.statusText,
-          headers: entry.headers,
+          headers,
         }));
       };
       req.onerror = () => { db.close(); reject(req.error); };
@@ -97,6 +123,12 @@ function getCachedApiResponse(url) {
 }
 
 let flushing = false;
+
+function notifyClients(data) {
+  return self.clients.matchAll({ type: "window" }).then((clients) => {
+    clients.forEach((client) => client.postMessage(data));
+  });
+}
 
 function flushMutationQueue() {
   if (flushing) return Promise.resolve();
@@ -108,8 +140,20 @@ function flushMutationQueue() {
           method: mutation.method,
           headers: mutation.headers,
           body: mutation.body,
-        })).then(() => deleteMutation(mutation.id))
-          .catch(() => {});
+        })).then((res) => {
+          if (res.ok) {
+            return deleteMutation(mutation.id);
+          }
+          throw new Error(`Server returned ${res.status}`);
+        }).catch(() => {
+          const retries = (mutation.retryCount || 0) + 1;
+          if (retries >= MAX_MUTATION_RETRIES) {
+            return deleteMutation(mutation.id).then(() =>
+              notifyClients({ type: "SYNC_FAILED", url: mutation.url, method: mutation.method })
+            );
+          }
+          return updateMutationRetry(mutation.id, retries);
+        });
       });
     }, Promise.resolve());
   }).finally(() => { flushing = false; });
