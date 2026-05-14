@@ -25,7 +25,7 @@ export async function PUT(
   const db = getDb();
   const { id } = await params;
   const body = await request.json();
-  const { date, routineId, notes, exercises: exerciseData } = body;
+  const { date, routineId, notes, startedAt, endedAt, exercises: exerciseData } = body;
 
   const bodyErr = validateUpdateWorkoutBody(body);
   if (bodyErr) {
@@ -40,7 +40,13 @@ export async function PUT(
   }
 
   await db.transaction(async (tx) => {
-    await tx.update(workouts).set({ date: date ?? existing.date, routineId: routineId ?? null, notes: notes ?? null }).where(eq(workouts.id, numericId));
+    await tx.update(workouts).set({
+      date: date ?? existing.date,
+      routineId: routineId ?? null,
+      notes: notes ?? null,
+      startedAt: startedAt === undefined ? existing.startedAt : startedAt,
+      endedAt: endedAt === undefined ? existing.endedAt : endedAt,
+    }).where(eq(workouts.id, numericId));
 
     const existingWe = await tx.select().from(workoutExercises).where(eq(workoutExercises.workoutId, numericId));
     if (existingWe.length > 0) {

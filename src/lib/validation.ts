@@ -72,14 +72,39 @@ export function validateExercises(exercises: unknown): string | null {
   return null;
 }
 
+function validateOptionalIsoTimestamp(value: unknown, field: string): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return `${field} must be an ISO 8601 string`;
+  if (!Number.isFinite(Date.parse(value))) return `${field} must be a valid ISO 8601 timestamp`;
+  return null;
+}
+
+function validateTimestampPair(body: Record<string, unknown>): string | null {
+  const startErr = validateOptionalIsoTimestamp(body.startedAt, "startedAt");
+  if (startErr) return startErr;
+  const endErr = validateOptionalIsoTimestamp(body.endedAt, "endedAt");
+  if (endErr) return endErr;
+  if (typeof body.startedAt === "string" && typeof body.endedAt === "string") {
+    if (Date.parse(body.endedAt) < Date.parse(body.startedAt)) {
+      return "endedAt must not be before startedAt";
+    }
+  }
+  return null;
+}
+
 export function validateCreateWorkoutBody(body: Record<string, unknown>): string | null {
   const dateErr = validateDate(body.date);
   if (dateErr) return dateErr;
+
+  const tsErr = validateTimestampPair(body);
+  if (tsErr) return tsErr;
 
   return validateExercises(body.exercises);
 }
 
 export function validateUpdateWorkoutBody(body: Record<string, unknown>): string | null {
+  const tsErr = validateTimestampPair(body);
+  if (tsErr) return tsErr;
   return validateExercises(body.exercises);
 }
 

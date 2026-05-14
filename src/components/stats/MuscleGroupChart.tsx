@@ -4,25 +4,8 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from "recharts";
 import type { MuscleGroupVolume } from "@/lib/types";
+import { CHART_COLORS, CHART_OTHERS_INDEX } from "@/lib/constants";
 import SkeletonCard from "./SkeletonCard";
-
-const PIE_COLORS = [
-  "#10b981", // emerald
-  "#3b82f6", // blue
-  "#f59e0b", // amber
-  "#a855f7", // purple
-  "#ef4444", // red
-  "#06b6d4", // cyan
-  "#ec4899", // pink
-  "#84cc16", // lime
-  "#f97316", // orange
-  "#6366f1", // indigo
-  "#14b8a6", // teal
-  "#eab308", // yellow
-  "#8b5cf6", // violet
-  "#22c55e", // green
-];
-const OTHERS_COLOR_INDEX = 5;
 
 export default function MuscleGroupChart({ data, loading }: { data: MuscleGroupVolume[]; loading: boolean }) {
   if (loading) return <SkeletonCard className="h-48" />;
@@ -49,7 +32,7 @@ export default function MuscleGroupChart({ data, loading }: { data: MuscleGroupV
             dataKey="value"
           >
             {pieData.map((_, i) => (
-              <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
             ))}
           </Pie>
           <Tooltip
@@ -60,7 +43,7 @@ export default function MuscleGroupChart({ data, loading }: { data: MuscleGroupV
       </ResponsiveContainer>
       <div className="space-y-1 mt-2">
         {data.map((d, i) => {
-          const colorIndex = i < 5 ? i : OTHERS_COLOR_INDEX;
+          const colorIndex = i < 5 ? i : CHART_OTHERS_INDEX;
           return (
             <div key={d.muscleGroup} className="flex items-center gap-2 text-xs">
               <span className="w-32 text-zinc-400 truncate">{d.muscleGroup}</span>
@@ -69,7 +52,7 @@ export default function MuscleGroupChart({ data, loading }: { data: MuscleGroupV
                   className="h-2 rounded-full transition-all"
                   style={{
                     width: `${(d.volume / total) * 100}%`,
-                    backgroundColor: PIE_COLORS[colorIndex],
+                    backgroundColor: CHART_COLORS[colorIndex],
                   }}
                 />
               </div>

@@ -7,7 +7,8 @@ import SetInput from "@/components/SetInput";
 import SetRow from "@/components/SetRow";
 import ErrorBanner from "@/components/ErrorBanner";
 import type { Exercise, Workout, WorkoutSet, PRData } from "@/lib/types";
-import { getLocalDateString, fmtDuration, mapSetsForApi, getErrorMessage } from "@/lib/utils";
+import { getLocalDateString, fmtDuration, fmtElapsed, mapSetsForApi, getErrorMessage } from "@/lib/utils";
+import { loadDraft, saveDraft, clearDraft } from "@/lib/draft";
 
 interface LastPerf {
   date: string;
@@ -35,6 +36,43 @@ function LogContent() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [resumedDraft, setResumedDraft] = useState(false);
+  const [elapsed, setElapsed] = useState<string>("");
+
+  useEffect(() => {
+    if (editId) return;
+    const draft = loadDraft();
+    if (draft) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoggedExercises(draft.loggedExercises);
+      setNotes(draft.notes);
+      setStartedAt(draft.startedAt);
+      setResumedDraft(true);
+    }
+  }, [editId]);
+
+  useEffect(() => {
+    if (editId) return;
+    if (loggedExercises.length === 0) {
+      clearDraft();
+      return;
+    }
+    if (!startedAt) return;
+    saveDraft({ startedAt, notes, loggedExercises });
+  }, [editId, loggedExercises, notes, startedAt]);
+
+  useEffect(() => {
+    if (!startedAt) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setElapsed("");
+      return;
+    }
+    const tick = () => setElapsed(fmtElapsed(startedAt));
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, [startedAt]);
 
   useEffect(() => {
     if (!editId) return;
@@ -109,6 +147,7 @@ function LogContent() {
 
   const handleAddSet = (reps: number, weight: number | null) => {
     if (!selectedExercise) return;
+    if (!editId && !startedAt) setStartedAt(new Date().toISOString());
     const existing = loggedExercises.find((le) => le.exercise.id === selectedExercise.id);
     const newSet: WorkoutSet = { reps, weightKg: weight ?? null, durationSeconds: null };
 
@@ -154,6 +193,7 @@ function LogContent() {
 
   const handleLogCardio = (durationSeconds: number) => {
     if (!selectedExercise) return;
+    if (!editId && !startedAt) setStartedAt(new Date().toISOString());
     const existing = loggedExercises.find((le) => le.exercise.id === selectedExercise.id);
     const newSet: WorkoutSet = { reps: 0, weightKg: null, durationSeconds };
     if (existing) {
@@ -173,15 +213,18 @@ function LogContent() {
   };
 
   const handleDeleteSet = (exerciseId: number, setIndex: number) => {
-    setLoggedExercises(
-      loggedExercises
-        .map((le) =>
-          le.exercise.id === exerciseId
-            ? { ...le, sets: le.sets.filter((_, i) => i !== setIndex) }
-            : le
-        )
-        .filter((le) => le.sets.length > 0)
-    );
+    const next = loggedExercises
+      .map((le) =>
+        le.exercise.id === exerciseId
+          ? { ...le, sets: le.sets.filter((_, i) => i !== setIndex) }
+          : le
+      )
+      .filter((le) => le.sets.length > 0);
+    setLoggedExercises(next);
+    if (next.length === 0) {
+      setStartedAt(null);
+      setResumedDraft(false);
+    }
   };
 
   const handleSave = async () => {
@@ -189,7 +232,7 @@ function LogContent() {
     setSaving(true);
     setError("");
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         date: editId ? undefined : getLocalDateString(),
         routineId: null,
         notes: notes.trim() || null,
@@ -199,6 +242,11 @@ function LogContent() {
           sets: mapSetsForApi(le.sets),
         })),
       };
+
+      if (!editId) {
+        body.startedAt = startedAt ?? new Date().toISOString();
+        body.endedAt = new Date().toISOString();
+      }
 
       if (editId) {
         const res = await fetch(`/api/workouts/${editId}`, {
@@ -215,10 +263,13 @@ function LogContent() {
           body: JSON.stringify(body),
         });
         if (!res.ok) throw new Error("Failed to save workout");
+        clearDraft();
         setLoggedExercises([]);
         setSelectedExercise(null);
         setLastPerf(null);
         setNotes("");
+        setStartedAt(null);
+        setResumedDraft(false);
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
@@ -241,6 +292,7 @@ function LogContent() {
           )}
           <span className="text-sm text-zinc-500">
             {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+            {!editId && startedAt && elapsed ? ` · ${elapsed}` : ""}
           </span>
         </div>
       </div>
@@ -252,6 +304,18 @@ function LogContent() {
       )}
 
       <ErrorBanner message={error} />
+
+      {resumedDraft && !editId && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 mb-4 flex items-center justify-between">
+          <p className="text-xs text-zinc-400">Resumed in-progress workout</p>
+          <button
+            onClick={() => setResumedDraft(false)}
+            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <ExercisePicker onSelect={handleSelectExercise} />
 

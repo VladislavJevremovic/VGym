@@ -61,7 +61,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const db = getDb();
   const body = await request.json();
-  const { date, routineId, notes, exercises: exerciseData } = body;
+  const { date, routineId, notes, startedAt, endedAt, exercises: exerciseData } = body;
 
   const bodyErr = validateCreateWorkoutBody(body);
   if (bodyErr) {
@@ -77,7 +77,13 @@ export async function POST(request: Request) {
   const workoutId = await db.transaction(async (tx) => {
     const [workout] = await tx
       .insert(workouts)
-      .values({ date, routineId: routineId ?? null, notes: notes ?? null })
+      .values({
+        date,
+        routineId: routineId ?? null,
+        notes: notes ?? null,
+        startedAt: startedAt ?? null,
+        endedAt: endedAt ?? null,
+      })
       .returning();
 
     for (let i = 0; i < exerciseData.length; i++) {

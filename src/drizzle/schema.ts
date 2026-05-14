@@ -27,6 +27,8 @@ export const workouts = sqliteTable("workouts", {
   date: text("date").notNull(), // YYYY-MM-DD
   routineId: integer("routine_id").references(() => routines.id, { onDelete: "set null" }),
   notes: text("notes"),
+  startedAt: text("started_at"),
+  endedAt: text("ended_at"),
 }, (table) => [
   index("idx_w_date").on(table.date),
 ]);

@@ -9,12 +9,13 @@ import CalendarHeatmap from "@/components/stats/CalendarHeatmap";
 import StrengthTable from "@/components/stats/StrengthTable";
 import IntensityChart from "@/components/stats/IntensityChart";
 import MuscleGroupChart from "@/components/stats/MuscleGroupChart";
+import WeeklySetsChart from "@/components/stats/WeeklySetsChart";
 import VolumeChart from "@/components/stats/VolumeChart";
 import PerExerciseChart from "@/components/stats/PerExerciseChart";
 import PRSection from "@/components/stats/PRSection";
 import type {
   SummaryData, CalendarDay,
-  MuscleGroupVolume, StrengthRow, IntensityBucket, PRData,
+  MuscleGroupVolume, StrengthRow, IntensityBucket, PRData, WeeklySetsSeries,
 } from "@/lib/types";
 import { getErrorMessage } from "@/lib/utils";
 
@@ -25,6 +26,8 @@ export default function StatsPage() {
   const [calendarLoading, setCalendarLoading] = useState(true);
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroupVolume[]>([]);
   const [mgLoading, setMgLoading] = useState(true);
+  const [weeklySets, setWeeklySets] = useState<WeeklySetsSeries | null>(null);
+  const [weeklySetsLoading, setWeeklySetsLoading] = useState(true);
   const [strength, setStrength] = useState<StrengthRow[]>([]);
   const [strengthLoading, setStrengthLoading] = useState(true);
   const [intensity, setIntensity] = useState<IntensityBucket[]>([]);
@@ -42,13 +45,14 @@ export default function StatsPage() {
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [s, c, mg, st, i, p] = await Promise.all([
+        const [s, c, mg, st, i, p, ws] = await Promise.all([
           fetchJson<SummaryData>("/api/stats/summary"),
           fetchJson<CalendarDay[]>("/api/stats/calendar?months=12"),
           fetchJson<MuscleGroupVolume[]>("/api/stats/muscle-groups?days=90"),
           fetchJson<StrengthRow[]>("/api/stats/strength-table?days=90"),
           fetchJson<IntensityBucket[]>("/api/stats/intensity?days=90"),
           fetchJson<PRData[]>("/api/stats/prs"),
+          fetchJson<WeeklySetsSeries>("/api/stats/weekly-sets?weeks=8"),
         ]);
         setSummary(s);
         setCalendar(c);
@@ -56,6 +60,7 @@ export default function StatsPage() {
         setStrength(st);
         setIntensity(i);
         setPrs(p);
+        setWeeklySets(ws);
       } catch (e: unknown) {
         setError(getErrorMessage(e));
       } finally {
@@ -65,6 +70,7 @@ export default function StatsPage() {
         setStrengthLoading(false);
         setIntensityLoading(false);
         setPrsLoading(false);
+        setWeeklySetsLoading(false);
       }
     };
     loadAll();
@@ -97,6 +103,10 @@ export default function StatsPage() {
 
         <AccordionSection title="Muscle Group Distribution">
           <MuscleGroupChart data={muscleGroups} loading={mgLoading} />
+        </AccordionSection>
+
+        <AccordionSection title="Weekly Sets per Muscle">
+          <WeeklySetsChart data={weeklySets} loading={weeklySetsLoading} />
         </AccordionSection>
 
         <AccordionSection title="Per-Exercise Progression">

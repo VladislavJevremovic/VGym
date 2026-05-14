@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Trash2, Pencil } from "lucide-react";
 import ErrorBanner from "@/components/ErrorBanner";
 import UndoToast from "@/components/UndoToast";
 import type { Workout } from "@/lib/types";
-import { fmtDuration, mapSetsForApi, getErrorMessage } from "@/lib/utils";
+import { fmtDuration, fmtElapsed, mapSetsForApi, getErrorMessage } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
@@ -86,6 +86,8 @@ export default function HistoryPage() {
           date: target.date,
           routineId: target.routineId,
           notes: target.notes,
+          startedAt: target.startedAt,
+          endedAt: target.endedAt,
           exercises: target.workoutExercises.map((we) => ({
             exerciseId: we.exercise.id,
             category: we.exercise.category,
@@ -174,6 +176,7 @@ export default function HistoryPage() {
                           </p>
                           <p className="text-xs text-zinc-500">
                             {w.workoutExercises.length} exercises · {totalSets} sets
+                            {w.startedAt && w.endedAt ? ` · ${fmtElapsed(w.startedAt, w.endedAt)}` : ""}
                           </p>
                         </div>
                         <button

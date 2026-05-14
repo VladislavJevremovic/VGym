@@ -19,6 +19,17 @@ export function fmtDuration(total: number): string {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
+export function fmtElapsed(startedAtIso: string, endedAtIso?: string | null): string {
+  const start = Date.parse(startedAtIso);
+  const end = endedAtIso ? Date.parse(endedAtIso) : Date.now();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return "";
+  const totalMinutes = Math.floor((end - start) / 60000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
 export function getErrorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }

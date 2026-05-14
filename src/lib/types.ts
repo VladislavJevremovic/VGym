@@ -36,7 +36,15 @@ export interface Workout {
   date: string;
   routineId: number | null;
   notes: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
   workoutExercises: WorkoutExercise[];
+}
+
+export interface WeeklySetsSeries {
+  weeks: number;
+  weekStarts: string[];
+  series: { muscleGroup: string; counts: number[]; total: number }[];
 }
 
 export interface StatsDataPoint {

@@ -15,6 +15,13 @@
       "when": 1778228119031,
       "tag": "0001_previous_emma_frost",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778750880657,
+      "tag": "0002_slimy_stephen_strange",
+      "breakpoints": true
     }
   ]
 }
