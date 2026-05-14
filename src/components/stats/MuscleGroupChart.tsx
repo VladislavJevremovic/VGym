@@ -7,11 +7,22 @@ import type { MuscleGroupVolume } from "@/lib/types";
 import SkeletonCard from "./SkeletonCard";
 
 const PIE_COLORS = [
-  "#10b981", "#22c55e", "#34d399", "#6ee7b7",
-  "#3b82f6", "#6366f1", "#8b5cf6", "#a78bfa",
-  "#f59e0b", "#f97316", "#ef4444", "#ec4899",
-  "#14b8a6", "#06b6d4",
+  "#10b981", // emerald
+  "#3b82f6", // blue
+  "#f59e0b", // amber
+  "#a855f7", // purple
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#84cc16", // lime
+  "#f97316", // orange
+  "#6366f1", // indigo
+  "#14b8a6", // teal
+  "#eab308", // yellow
+  "#8b5cf6", // violet
+  "#22c55e", // green
 ];
+const OTHERS_COLOR_INDEX = 5;
 
 export default function MuscleGroupChart({ data, loading }: { data: MuscleGroupVolume[]; loading: boolean }) {
   if (loading) return <SkeletonCard className="h-48" />;
@@ -48,20 +59,26 @@ export default function MuscleGroupChart({ data, loading }: { data: MuscleGroupV
         </PieChart>
       </ResponsiveContainer>
       <div className="space-y-1 mt-2">
-        {data.map((d) => (
-          <div key={d.muscleGroup} className="flex items-center gap-2 text-xs">
-            <span className="w-32 text-zinc-400 truncate">{d.muscleGroup}</span>
-            <div className="flex-1 bg-zinc-800 rounded-full h-2">
-              <div
-                className="bg-emerald-500 h-2 rounded-full transition-all"
-                style={{ width: `${(d.volume / total) * 100}%` }}
-              />
+        {data.map((d, i) => {
+          const colorIndex = i < 5 ? i : OTHERS_COLOR_INDEX;
+          return (
+            <div key={d.muscleGroup} className="flex items-center gap-2 text-xs">
+              <span className="w-32 text-zinc-400 truncate">{d.muscleGroup}</span>
+              <div className="flex-1 bg-zinc-800 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full transition-all"
+                  style={{
+                    width: `${(d.volume / total) * 100}%`,
+                    backgroundColor: PIE_COLORS[colorIndex],
+                  }}
+                />
+              </div>
+              <span className="w-20 text-right text-zinc-500 font-mono">
+                {total > 0 ? `${((d.volume / total) * 100).toFixed(0)}%` : "0%"}
+              </span>
             </div>
-            <span className="w-20 text-right text-zinc-500 font-mono">
-              {total > 0 ? `${((d.volume / total) * 100).toFixed(0)}%` : "0%"}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

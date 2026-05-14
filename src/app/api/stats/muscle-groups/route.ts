@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
 import { workouts, workoutExercises, sets, exercises } from "@/drizzle/schema";
-import { eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, ne, sql } from "drizzle-orm";
 import { formatDate } from "@/lib/utils";
 
 export async function GET(request: Request) {
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
     .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
     .innerJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
-    .where(gte(workouts.date, cutoffStr))
+    .where(and(gte(workouts.date, cutoffStr), ne(exercises.muscleGroup, "Cardio")))
     .groupBy(exercises.muscleGroup);
 
   rows.sort((a, b) => b.volume - a.volume);

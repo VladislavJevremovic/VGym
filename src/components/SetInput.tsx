@@ -21,6 +21,28 @@ export default function SetInput({ category, onAdd, onLogCardio, previousWeight 
   const [minutes, setMinutes] = useState("");
   const [seconds, setSeconds] = useState("");
   const timerId = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  const acquireWakeLock = async () => {
+    if (typeof navigator === "undefined" || !("wakeLock" in navigator)) return;
+    if (wakeLockRef.current) return;
+    try {
+      const sentinel = await navigator.wakeLock.request("screen");
+      wakeLockRef.current = sentinel;
+      sentinel.addEventListener("release", () => {
+        if (wakeLockRef.current === sentinel) wakeLockRef.current = null;
+      });
+    } catch {
+      // Silently ignore — wake-lock is best-effort.
+    }
+  };
+
+  const releaseWakeLock = () => {
+    const sentinel = wakeLockRef.current;
+    if (!sentinel) return;
+    wakeLockRef.current = null;
+    sentinel.release().catch(() => {});
+  };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -30,17 +52,39 @@ export default function SetInput({ category, onAdd, onLogCardio, previousWeight 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0) {
       if (timerId.current) { clearInterval(timerId.current); timerId.current = null; }
+      releaseWakeLock();
       return;
     }
+    acquireWakeLock();
     timerId.current = setInterval(() => {
       setTimeLeft((t) => {
         if (t === null || t <= 1) { clearInterval(timerId.current!); timerId.current = null; return null; }
         return t - 1;
       });
     }, 1000);
-    return () => { if (timerId.current) { clearInterval(timerId.current); timerId.current = null; } };
+    return () => {
+      if (timerId.current) { clearInterval(timerId.current); timerId.current = null; }
+      releaseWakeLock();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft === null]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && timeLeft !== null && timeLeft > 0) {
+        acquireWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft === null]);
+
+  const stepWeight = (delta: number) => {
+    const parsed = weight.trim() === "" ? NaN : parseFloat(weight);
+    const base = Number.isFinite(parsed) ? parsed : (previousWeight ?? 0);
+    setWeight(String(base + delta));
+  };
 
   const startTimer = () => setTimeLeft(restSeconds);
   const cancelTimer = () => { if (timerId.current) { clearInterval(timerId.current); timerId.current = null; } setTimeLeft(null); };
@@ -187,16 +231,16 @@ export default function SetInput({ category, onAdd, onLogCardio, previousWeight 
               {previousWeight != null && (
                 <div className="flex gap-1">
                   <button
-                    onClick={() => setWeight(String(previousWeight - 5))}
+                    onClick={() => stepWeight(-5)}
                     className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-lg px-2.5 py-3 text-sm font-medium transition-colors"
-                    title="5 kg less than last set"
+                    title="5 kg less"
                   >
                     −5
                   </button>
                   <button
-                    onClick={() => setWeight(String(previousWeight + 5))}
+                    onClick={() => stepWeight(5)}
                     className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-lg px-2.5 py-3 text-sm font-medium transition-colors"
-                    title="5 kg more than last set"
+                    title="5 kg more"
                   >
                     +5
                   </button>
