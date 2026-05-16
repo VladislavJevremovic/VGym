@@ -11,6 +11,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@libsql/client"],
+  images: { unoptimized: true },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

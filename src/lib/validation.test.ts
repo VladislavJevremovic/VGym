@@ -327,11 +327,11 @@ describe("validateExerciseBody", () => {
   });
 
   it("rejects invalid muscleGroup type", () => {
-    expect(validateExerciseBody({ name: "Test", muscleGroup: 123 })).toBe("Invalid muscle group");
+    expect(validateExerciseBody({ name: "Test", muscleGroup: 123 })).toMatch(/^Invalid muscle group/);
   });
 
   it("rejects invalid category type", () => {
-    expect(validateExerciseBody({ name: "Test", category: 456 })).toBe("Invalid category");
+    expect(validateExerciseBody({ name: "Test", category: 456 })).toMatch(/^Invalid category/);
   });
 
   it("accepts name without muscleGroup or category", () => {

@@ -14,18 +14,41 @@ APIs, conventions, and file structure may differ from older Next.js. Read `node_
 
 | Task | Command |
 |---|---|
-| Dev server | `npm run dev` |
-| Build | `npm run build` |
-| Lint | `npm run lint` |
-| Typecheck | `npx tsc --noEmit` |
-| Generate DB migration | `npm run db:generate` |
-| Apply migration | `npm run db:migrate` |
-| Seed DB | `npm run db:seed` |
-| Drizzle Studio | `npm run db:studio` |
+| Install | `pnpm install` |
+| Dev server | `pnpm dev` |
+| Build | `pnpm build` |
+| Lint | `pnpm lint` |
+| Typecheck | `pnpm tsc --noEmit` |
+| Test | `pnpm test` |
+| Verify package signatures | `pnpm audit signatures` |
+| Generate DB migration | `pnpm db:generate` |
+| Apply migration | `pnpm db:migrate` |
+| Seed DB | `pnpm db:seed` |
+| Drizzle Studio | `pnpm db:studio` |
 
 **Order:** `db:generate` → `db:migrate` → `db:seed` (seed includes 54 exercises across 14 muscle groups, 6 PPL routines).
 
-No tests, formatter, or CI.
+No formatter or CI. Vitest covers `src/lib/validation.ts`.
+
+### Package manager: pnpm
+
+`pnpm` is the only supported package manager — `packageManager` in `package.json` pins the version, and `.npmrc` enables `save-exact` (no `^`-ranged versions).
+
+**Install-script policy: all postinstall scripts are denied by default.** The `allowBuilds` map in `pnpm-workspace.yaml` is the source of truth — `true` allows a package's install scripts to run, `false` rejects them, and an unlisted package will cause `pnpm install` to error until you decide.
+
+The build succeeds with everything denied because the platform-specific binaries (`@esbuild/darwin-arm64`, `@next/swc-darwin-arm64`, `@unrs/resolver-binding-darwin-arm64`, etc.) are normal tarball deps with no scripts of their own.
+
+When adding a dependency:
+1. After `pnpm install`, check for new entries in pnpm's "Ignored build scripts" output.
+2. For each, read the package's `package.json` `scripts.postinstall` (or `install` / `preinstall`) and confirm it is benign or skippable.
+3. Record the decision in `pnpm-workspace.yaml` `allowBuilds`: set `false` to keep the script skipped. **Default to `false`** — most "install binary" scripts are redundant when the platform-specific binary already arrives as a separate npm package. Only set `true` if the postinstall is genuinely required at runtime.
+4. If a postinstall script is genuinely needed, prefer pinning the dep to an audited exact version before allowing.
+
+You can manage this interactively with `pnpm approve-builds <pkg>` (allow) or `pnpm approve-builds '!<pkg>'` (deny).
+
+### Image optimization disabled
+
+`next.config.ts` sets `images: { unoptimized: true }`. The app uses zero `next/image` calls, so `sharp` would be dead weight at runtime; disabling image optimization also lets us keep `sharp` on the postinstall denylist. **Do not introduce `next/image` without first re-enabling image optimization and re-evaluating the `sharp` policy.**
 
 ## Environment
 
