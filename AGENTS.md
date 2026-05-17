@@ -5,7 +5,7 @@
 
 APIs, conventions, and file structure may differ from older Next.js. Read `node_modules/next/dist/docs/` before writing code. Heed deprecation notices. Key differences this repo relies on:
 - **`src/proxy.ts`** replaces `middleware.ts` — export a named `proxy` function (not `middleware`), plus a `config.matcher`.
-- `params` and `searchParams` in pages are plain objects, **not** Promises.
+- `params` and `searchParams` are **`Promise`s**. `await` them in Server Components / route handlers, or unwrap with React's `use()` in Client Components (`use(params)`). Type them as `Promise<{ id: string }>` etc.
 - `cookies()` from `next/headers` is async (`await cookies()`).
 - `serverExternalPackages` in `next.config.ts` replaces `serverComponentsExternalPackages`.
 <!-- END:nextjs-agent-rules -->
@@ -108,6 +108,8 @@ Indexes: `idx_re_routine_id`, `idx_re_exercise_id`
 | `date` | `text` | NOT NULL (YYYY-MM-DD) |
 | `routine_id` | `integer` | NULLABLE, FK → `routines.id` (SET NULL) |
 | `notes` | `text` | NULLABLE |
+| `started_at` | `text` | NULLABLE (ISO 8601 timestamp) |
+| `ended_at` | `text` | NULLABLE (ISO 8601 timestamp) |
 
 Index: `idx_w_date`
 
@@ -150,7 +152,8 @@ Index: `idx_s_workout_exercise_id`
 | `/routines` | `src/app/routines/page.tsx` | Client | Yes | Routine CRUD (list, create, edit, delete) |
 | `/routines/[id]` | `src/app/routines/[id]/page.tsx` | Client | Yes | Guided routine session with step navigation |
 | `/history` | `src/app/history/page.tsx` | Client | Yes | Cursor-paginated workout history grouped by month |
-| `/charts` | `src/app/charts/page.tsx` | Client | Yes | **Redirects** to `/stats` (legacy) |
+| `/settings` | `src/app/settings/page.tsx` | Client | Yes | Export / import all data as JSON backup |
+| `/charts` | `src/app/charts/page.tsx` | Server | Yes | **Redirects** to `/stats` (legacy) |
 
 ### API Routes
 
@@ -182,40 +185,58 @@ Index: `idx_s_workout_exercise_id`
 | `GET` | `/api/stats/strength-table` | Yes | — | Current e1RM per exercise `?days=90` |
 | `GET` | `/api/stats/intensity` | Yes | — | Rep range distribution `?days=90` |
 | `GET` | `/api/stats/prs` | Yes | — | Lifetime personal records per exercise |
+| `GET` | `/api/stats/weekly-sets` | Yes | — | Sets per muscle group per week `?weeks=8` (1–26, excludes Cardio) |
+| `GET` | `/api/export` | Yes | — | Streams full DB as JSON backup (`vgym-backup-YYYY-MM-DD.json`) |
+| `POST` | `/api/import` | Yes | — | **Destructive**: wipes all data, then replays JSON backup (`version: 1`) |
 
 ### Components
 
 | Component | File | Props | Description |
 |---|---|---|---|
-| `BottomNav` | `src/components/BottomNav.tsx` | none | 4-tab fixed nav (Log, Routines, History, Stats). Checks `window.__vgym_dirty` before navigating. |
+| `BottomNav` | `src/components/BottomNav.tsx` | none | 5-tab fixed nav (Log, Routines, History, Stats, Settings). On click, if `window.__vgym_dirty` is set, opens `ConfirmModal` instead of navigating. |
+| `ConfirmModal` | `src/components/ConfirmModal.tsx` | `{ message, onConfirm, onCancel }` | Focus-trapped modal dialog. ESC cancels; backdrop click cancels; "Stay" / "Leave" actions. |
 | `ErrorBanner` | `src/components/ErrorBanner.tsx` | `{ message }` | Red-tinted error banner. Null when no message. |
-| `ExercisePicker` | `src/components/ExercisePicker.tsx` | `{ onSelect, selectedId }` | Combobox with search + muscle-group accordion. ARIA-compliant keyboard nav. Module-level cache. "Manage exercises" button at bottom. |
-| `SetInput` | `src/components/SetInput.tsx` | `{ category, onAdd, onLogCardio }` | Strength mode (reps + weight + rest timer with countdown) or Cardio mode (minutes + seconds). Rep presets [1,5,8,10,12,15,20]. Rest presets [60,90,120,180]. |
+| `ExercisePicker` | `src/components/ExercisePicker.tsx` | `{ onSelect, selectedId }` | Combobox with search + muscle-group accordion. ARIA-compliant keyboard nav. Module-level cache (`cachedExercises`); use the exported `invalidateExerciseCache()` after mutations. "Manage exercises" button opens `ManageExercisesModal`. |
+| `ManageExercisesModal` | `src/components/ManageExercisesModal.tsx` | `{ onClose, onCacheInvalidate }` | Focus-trapped CRUD modal: add / rename / re-categorize / delete custom exercises. Delete shows `UndoToast`. Calls `onCacheInvalidate` on any mutation. |
+| `SetInput` | `src/components/SetInput.tsx` | `{ category, onAdd, onLogCardio, previousWeight? }` | Strength mode (reps + weight + rest timer with countdown + screen Wake Lock) or Cardio mode (minutes + seconds). `previousWeight` auto-fills the weight field. Rep presets [1,5,8,10,12,15,20]. Rest presets [60,90,120,180]. |
 | `SetRow` | `src/components/SetRow.tsx` | `{ setNumber, reps, weightKg, durationSeconds, onDelete, readonly, prBadge }` | Single set display. Optional PR badge. |
 | `UndoToast` | `src/components/UndoToast.tsx` | `{ label, onUndo }` | Fixed bottom toast with undo. 5s auto-dismiss by caller. |
 | `ServiceWorkerRegistrar` | `src/components/ServiceWorkerRegistrar.tsx` | none | Registers SW, detects waiting updates, shows "New version" update banner. |
+
+### Stats components (`src/components/stats/`)
+
+`AccordionSection`, `CalendarHeatmap`, `IntensityChart`, `MuscleGroupChart`, `PRSection`, `PerExerciseChart`, `SkeletonCard`, `StrengthTable`, `SummaryCards`, `VolumeChart`, `WeeklySetsChart`. Recharts-based. The Stats page renders 8 accordion sections in order: Calendar, Volume Overview, Muscle Group Distribution, Weekly Sets per Muscle, Per-Exercise Progression, Strength Table, Set Intensity, Personal Records.
 
 ### Data Fetching Patterns
 
 - **All pages use raw `fetch()`** with `useEffect` + try/catch. No React Query / SWR.
 - Standard pattern: `loading` boolean → skeleton UI, `error` string → `ErrorBanner`, empty array → empty state message.
-- **Exercise caching:** `ExercisePicker` caches exercises in a module-level variable (`cachedExercises`). `RoutineForm` does NOT — fetches fresh each mount.
-- **Dirty tracking:** `src/lib/global.d.ts` extends `Window` with `__vgym_dirty`. Set by `/log` when unsaved sets exist. Checked by `BottomNav` and `beforeunload` event.
+- **Exercise caching:** `ExercisePicker` caches exercises in a module-level variable (`cachedExercises`); call `invalidateExerciseCache()` after mutations (already wired through `ManageExercisesModal`).
+- **Dirty tracking:** `src/lib/global.d.ts` extends `Window` with `__vgym_dirty`. Set by `/log` when unsaved sets exist. `BottomNav` reads it and opens `ConfirmModal` instead of navigating.
+- **Workout drafts:** `/log` persists in-progress workouts to `localStorage["vgym:logDraft"]` via `src/lib/draft.ts` so a refresh / accidental close doesn't lose sets. `/routines/[id]` (guided sessions) does NOT use drafts.
+- **Elapsed clock:** When `/log` starts a workout it records `startedAt` (ISO 8601). The page renders a live `fmtElapsed` clock that ticks every 60s. `endedAt` is set at save time. Both flow through to `workouts.started_at` / `workouts.ended_at`.
 
 ### Validation (`src/lib/validation.ts`)
 
-- `validateDate` — must match `YYYY-MM-DD` regex and be a real date.
+- `validateDate` — must match `YYYY-MM-DD` regex.
 - `validateExerciseId` — must be a positive integer.
-- `validateSetForCategory(category, set)` — cardio: `durationSeconds` required; strength: `reps` required, `weightKg` optional but non-negative.
-- `validateExercises` — applies above per-exercise.
-- `validateCreateWorkoutBody(body)` — date + non-empty exercises array + requires all fields.
-- `validateUpdateWorkoutBody(body)` — date optional, exercises required (same per-set rules).
-- `validateRoutineBody(body)` — name + non-empty exerciseIds array.
+- `validateSetForCategory(set, category)` — cardio: positive integer `durationSeconds`; strength: positive integer `reps`, `weightKg` optional but non-negative number.
+- `validateExercises` — non-empty array; per-exercise non-empty `sets` with per-set category rules.
+- `validateCreateWorkoutBody(body)` — date + optional `startedAt`/`endedAt` (ISO 8601, end ≥ start) + non-empty exercises.
+- `validateUpdateWorkoutBody(body)` — optional `startedAt`/`endedAt` + exercises (date is not required on update — falls back to existing row).
+- `validateRoutineBody(body)` — non-empty `name` + non-empty positive-integer `exerciseIds`.
+- `validateExerciseBody(body)` — non-empty `name`; optional `muscleGroup` must be in `MUSCLE_GROUPS`; optional `category` must be in `CATEGORIES`.
+
+### Other lib files
+
+- `src/lib/draft.ts` — `loadDraft` / `saveDraft` / `clearDraft` against `localStorage["vgym:logDraft"]`. Stores `{ startedAt, notes, loggedExercises }` so an in-progress free-form workout survives reloads. Cleared on save or when the list empties. Only used by `/log` (not `/routines/[id]`).
+- `src/lib/stats.ts` — `computeE1rm(weightKg, reps)` Epley formula helper, shared between client and server.
+- `src/lib/utils.ts` — `getLocalDateString` (today as `YYYY-MM-DD` in local tz), `formatDate(Date)`, `formatDisplayDate("YYYY-MM-DD" → "MM/DD")`, `fmtDuration(totalSeconds)`, `fmtElapsed(startedAtIso, endedAtIso?)` (returns `"42m"` / `"1h 3m"`), `getErrorMessage`, `mapSetsForApi`.
 
 ### PWA Strategy
 
 - **Service Worker** (`public/sw.js`):
-  - **Install:** Pre-caches 4 shell URLs (`/log`, `/routines`, `/history`, `/stats`).
+  - **Install:** Pre-caches 4 shell URLs (`/log`, `/routines`, `/history`, `/stats`). `/settings` is not in the pre-cache list — if you need it available offline, add it to `SHELL_URLS` in `public/sw.js`.
   - **Activate:** Delete old caches, claim clients, flush offline mutation queue.
   - **API GETs:** Network-first with IndexedDB cache fallback (`api-cache` store).
   - **API mutations (POST/PUT/DELETE):** Network-first; on failure, queue in IndexedDB (`mutations` store) for later retry.
@@ -229,10 +250,16 @@ Index: `idx_s_workout_exercise_id`
 
 All stats endpoints compute from existing tables (no dedicated stats tables). Key formulas:
 - **Volume** = Σ(reps × weight_kg), rounded to 1 decimal.
-- **e1RM** (Epley) = maxWeight × (1 + reps_at_maxWeight / 30).
+- **e1RM** (Epley, in `src/lib/stats.ts`) = `weightKg * (1 + reps / 30)`.
 - **Streaks** = consecutive calendar days with ≥1 workout (current + longest).
 - **Intensity buckets:** 1–5 (Strength), 6–8 (Strength/Hypertrophy), 9–12 (Hypertrophy), 13+ (Endurance).
 - **PR detection:** Compare each set against lifetime bests (max weight, max reps, best e1RM, max volume) per exercise.
+- **Weekly sets:** counts `sets` rows per `(muscleGroup, week-bucket)` over the last N weeks (1–26, default 8). Cardio is excluded. Buckets are computed in UTC against `workouts.date`, ordered most-recent first.
+
+### Export / Import
+
+- `/api/export` returns a versioned (`version: 1`) JSON snapshot using **index-based references** instead of database IDs — exercises, routines, routineExercises, workouts, workoutExercises, and sets are arrays, and FK fields like `routineIndex`/`exerciseIndex`/`workoutIndex`/`workoutExerciseIndex` point into them.
+- `/api/import` validates the payload, then **wipes every domain table** (`sets`, `workout_exercises`, `workouts`, `routine_exercises`, `routines`, `exercises`) and replays the snapshot in order. The `settings` table (PIN hash) is left untouched. The wipe + insert is **not wrapped in a transaction**, so a mid-import failure can leave the DB partially empty — front this with a user confirmation (the `/settings` page does this with a destructive-style modal).
 
 ### Seed Data
 
@@ -249,13 +276,16 @@ src/
 │   ├── api/
 │   │   ├── auth/check|login|setup/route.ts
 │   │   ├── exercises/route.ts + [id]/route.ts + [id]/last/route.ts
+│   │   ├── export/route.ts
+│   │   ├── import/route.ts
 │   │   ├── routines/route.ts + [id]/route.ts
-│   │   ├── stats/route.ts (per-exercise) + summary|calendar|volume|muscle-groups|strength-table|intensity|prs/route.ts
+│   │   ├── stats/[exerciseId]/route.ts (per-exercise) + summary|calendar|volume|muscle-groups|strength-table|intensity|prs|weekly-sets/route.ts
 │   │   └── workouts/route.ts + [id]/route.ts
 │   ├── charts/page.tsx (→ redirect)
 │   ├── history/page.tsx
 │   ├── log/page.tsx
 │   ├── routines/page.tsx + [id]/page.tsx
+│   ├── settings/page.tsx
 │   ├── setup/page.tsx
 │   ├── stats/page.tsx
 │   ├── layout.tsx
@@ -263,22 +293,38 @@ src/
 │   └── globals.css
 ├── components/
 │   ├── BottomNav.tsx
+│   ├── ConfirmModal.tsx
 │   ├── ErrorBanner.tsx
 │   ├── ExercisePicker.tsx
+│   ├── ManageExercisesModal.tsx
 │   ├── ServiceWorkerRegistrar.tsx
 │   ├── SetInput.tsx
 │   ├── SetRow.tsx
-│   └── UndoToast.tsx
+│   ├── UndoToast.tsx
+│   └── stats/
+│       ├── AccordionSection.tsx
+│       ├── CalendarHeatmap.tsx
+│       ├── IntensityChart.tsx
+│       ├── MuscleGroupChart.tsx
+│       ├── PRSection.tsx
+│       ├── PerExerciseChart.tsx
+│       ├── SkeletonCard.tsx
+│       ├── StrengthTable.tsx
+│       ├── SummaryCards.tsx
+│       ├── VolumeChart.tsx
+│       └── WeeklySetsChart.tsx
 ├── drizzle/
 │   ├── schema.ts
 │   ├── seed.ts
-│   └── migrations/
+│   └── migrations/ (0000…destine.sql, 0001…frost.sql, 0002…strange.sql)
 ├── lib/
 │   ├── auth.ts / auth-constants.ts
-│   ├── constants.ts (MUSCLE_GROUPS, CATEGORIES, presets)
-│   ├── db.ts (singleton + helpers)
-│   ├── types.ts (Exercise, Routine, Workout, StatsDataPoint, etc.)
-│   ├── utils.ts (date formatting, duration, mapSetsForApi, getErrorMessage)
+│   ├── constants.ts (MUSCLE_GROUPS, CATEGORIES, REST_PRESETS, REP_PRESETS, CHART_COLORS, CHART_OTHERS_INDEX)
+│   ├── db.ts (singleton + helpers: groupSetsByWorkoutExerciseId, buildSetInsertRows, buildRoutineExerciseInsertRows, verifyExerciseIds)
+│   ├── draft.ts (localStorage workout draft for /log)
+│   ├── stats.ts (computeE1rm)
+│   ├── types.ts (Exercise, Routine, Workout, StatsDataPoint, WeeklySetsSeries, etc.)
+│   ├── utils.ts (date formatting, fmtDuration, fmtElapsed, mapSetsForApi, getErrorMessage)
 │   ├── validation.ts + validation.test.ts
 │   ├── rate-limit.ts
 │   └── global.d.ts
